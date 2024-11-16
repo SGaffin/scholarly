@@ -1,0 +1,51 @@
+﻿drug_id,Drug_name,Dose_Form
+0,Acetaminophen,500 mg tab
+1,Acetaminophen (peds),"80mg, chewable"
+2,Albuterol,0.083% 2.5mg/3ml solution
+3,Amoxicillin,500 mg tab
+4,Amoxicillin (peds),"250 mg, chewable"
+5,Bacitracin ,"500u, ointment"
+6,Benzalkonium w/ lidocaine (burn cream),0.13/0.5% cream
+7,Calcium carbonate,"500 mg, chewable"
+8,Cefazolin ,1gm powder inj
+9,Ceftriaxone,500 mg powder inj
+10,Cetirizine ,10 mg tab
+11,Childrens multivitamin w/o iron,Animal shaped tab
+12,Cyclobenzaprine,10 mg tab
+13,Dexamethasone inj,"10 mg/ml, 10 ml"
+14,Diphenhydramine,25 mg cap
+15,Docusate,100 mg softgel
+16,Doxycycline,100 mg tab
+17,Enalapril ,10 mg tab
+18,Famotidine,20 mg tab
+19,Fluconazole,150 mg tab
+20,Fluoxetine,20 mg cap
+21,Furosemide,40 mg tab
+22,Gentamicin ophthalmic solution,"0.3%, 5ml"
+23,Glipizide 10,10 mg tab
+24,Glipizide 5,5 mg half tab
+25,Griseofulvin,125mg tab
+26,Guaifenesin,400 mg
+27,HCTZ,25mg tab
+28,Hydrocortisone,1% cream
+29,Ibuprofen ,200 mg tab
+30,Ivermectin,6 mg tab
+31,Ivermectin (peds),6 mg tab
+32,Loperamide ,2mg tab
+33,Mebendazole ,100 mg chewable
+34,Metformin 1000,1000mg tab
+35,Metformin 500,500 mg tab
+36,Metronidazole ,250 mg tab
+37,Multivitamin w/ iron,Tab 
+38,Multivitamin w/o iron,Tab 
+39,Mupirocin ointment,"2%, 22gm"
+40,Nystatin,"100,000u oint, 20gm"
+41,Ondansetron,4mg tab
+42,Prednisone ,"10 mg, scored"
+43,Pregnancy test,Urine cassette test
+44,Promethazine ,25 mg tab
+45,Promethazine (peds),12.5 mg
+46,Salbutamol ,4 mg tab
+47,Salbutamol (peds),2mg half tab
+48,SMP/TMX DS,800/160 mg tab
+49,SMP/TMX DS (peds),400/80 mg half tab
