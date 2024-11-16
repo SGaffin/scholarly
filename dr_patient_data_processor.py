@@ -221,6 +221,9 @@ pvdata.columns = cols
 #----------------------------------------------------------------------------------------------------------------
 
 #drug_index initialization---------------------------------------------------------------------------------------
+
+drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Drug_table.csv')
+drug_read.columns = ['id','drug_name','dosage']
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
 # c.execute("""DROP TABLE drug_index""")
@@ -229,14 +232,14 @@ pvdata.columns = cols
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE drug_index (id, drug_name, dosage, distribution)""")
+# c.execute("""CREATE TABLE drug_index (id, drug_name, dosage)""")
 # ###c.execute("""DELETE FROM drug_index WHERE drug_name = 'Ibuprofen' """)
 # ###c.execute("""UPDATE drug_index SET drug_name = 'Enalapril' WHERE drug_name = 'Enalapril '  """)
 # conn.commit()
 # conn.close()
 
 # conn = sqlite3.connect(db_path)
-# drug.to_sql('drug_index', conn, if_exists='append', index=False)
+# drug_read.to_sql('drug_index', conn, if_exists='append', index=False)
 # conn.commit()
 # conn.close()
 
@@ -251,6 +254,9 @@ drugtest.columns = cols
 
 
 #diagnosis_index initialization----------------------------------------------------------------------------------
+diag_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diagnosis_id_table.csv')
+diag_read.columns = ['id','diagnosis']
+
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
 # c.execute("""CREATE TABLE diagnosis_index (id, diagnosis)""")
@@ -258,7 +264,7 @@ drugtest.columns = cols
 # conn.close()
 
 # conn = sqlite3.connect(db_path)
-# diagnosis.to_sql('diagnosis_index', conn, if_exists='append', index=False)
+# diag_read.to_sql('diagnosis_index', conn, if_exists='append', index=False)
 # conn.commit()
 # conn.close()
 
@@ -273,22 +279,18 @@ diagtest.columns = cols
 
 
 #diagnosis_drug_ref initialization-------------------------------------------------------------------------------
-# diag_meds_cache = diag_meds
-# diag_meds = diag_meds.merge(drug, how = 'left', on = ['drug_name','dosage','distribution'])
-# diag_meds = diag_meds.rename(columns = {'id':'drug_id'})
-
-# diag_meds = diag_meds.merge(diagnosis, how = 'left', on = ['diagnosis'])
-# diag_meds = diag_meds.rename(columns = {'id':'diagnosis_id'})
-# diag_meds = diag_meds[['diagnosis_id', 'drug_id', 'dosage', 'distribution']]
+diag_drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diag_drug_table.csv')
+diag_drug_read.columns = ['diag_id','drug_id']
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE diagnosis_drug_ref (diagnosis_id, drug_id, dosage, distribution)""")
+# c.execute("""CREATE TABLE diagnosis_drug_ref (diag_id, drug_id)""")
+# # c.execute("""DROP TABLE diagnosis_drug_ref""")
 # conn.commit()
 # conn.close()
 
 # conn = sqlite3.connect(db_path)
-# diag_meds.to_sql('diagnosis_drug_ref', conn, if_exists='append', index=False)
+# diag_drug_read.to_sql('diagnosis_drug_ref', conn, if_exists='append', index=False)
 # conn.commit()
 # conn.close()
 
@@ -324,7 +326,7 @@ def diagdrug_pull():
                                  LEFT JOIN(SELECT * FROM drug_index) drg
                                  ON ddr.drug_id = drg.id
                                  LEFT JOIN(SELECT * FROM diagnosis_index) diag
-                                 ON ddr.diagnosis_id = diag.id""")
+                                 ON ddr.diag_id = diag.id""")
     diag_drug_test = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(diag_drug_qry.description)[0])
     diag_drug_test.columns = cols
@@ -340,9 +342,9 @@ def patientrecord_pull():
     pr_qry = c.execute("""SELECT pv.*, pdd.diag_count, plr.lab_result_count
                           FROM patient_vitals pv
                           LEFT JOIN(SELECT patient_id, COUNT(*) AS diag_count FROM patient_diag_drug GROUP BY patient_id) pdd
-                          ON pv.patient_id = pdd.patient_id
+                          ON CAST(pv.patient_id AS INT) = CAST(pdd.patient_id AS INT)
                           LEFT JOIN (SELECT patient_id, COUNT(*) AS lab_result_count FROM patient_lab_results GROUP BY patient_id) plr
-                          ON pv.patient_id = plr.patient_id""")
+                          ON CAST(pv.patient_id AS INT) = CAST(plr.patient_id AS INT)""")
     pr_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pr_qry.description)[0])
     pr_data.columns = cols

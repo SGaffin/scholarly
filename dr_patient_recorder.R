@@ -5,8 +5,11 @@ library(bslib)
 library(DT)
 library(reticulate)
 
-use_python("C:/Users/steve/anaconda3/python.exe")
-diagdrug_pull <- import_from_path("dr_patient_modules","./utils/")
+# use_python("C:/Users/steve/anaconda3/python.exe")
+use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
+
+diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents/GitHub/scholarly/utils")
+# diagdrug_pull <- import_from_path("dr_patient_modules","./utils/")
 
 # diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
 # meds <- rbind(diagnosis_drug_ref$drug_name[diagnosis_drug_ref$diagnosis=="Pain"])
@@ -24,8 +27,18 @@ ui <- fluidPage(
         #    ),
     tabPanel('New Patient',
              fluidRow(column(3,uiOutput('br_text'))),
-             fluidRow(column(4, textInput("age_input","Age", "")),  column(4, selectInput("sex","Sex", c("Male"="M","Female"="F"))), column(4, textInput("wt_input","Weight", ""))),
-             fluidRow(column(3, textInput("hr_input","Heart Rate", "",)), column(3,textInput("bp_input","Blood Pressure", "",)), column(3,textInput("rr_input","Resp Rate", "",)),column(3, textInput("o2s_input","O2 Sat", "",))),
+             fluidRow(column(12,uiOutput("l1_txt"))),
+             fluidRow(column(12,uiOutput("vitals_txt"))),
+             fluidRow(column(2, textInput("age_input","Age", "")), 
+                      column(2, style='padding-left:0px;', selectInput("sex","Sex", c("Male"="M","Female"="F"))), 
+                      column(2, style='padding-left:0px;', textInput("wt_input","Weight", "")),
+                      column(2, style='padding-left:0px;', textInput("hr_input","Heart Rate", "",))), 
+             fluidRow(column(2, textInput("bp_input","Blood Pressure", "",)), 
+                      column(2, style='padding-left:0px;', textInput("rr_input","Resp Rate", "",)),
+                      column(2, style='padding-left:0px;', textInput("o2s_input","O2 Sat", "",))),
+             fluidRow(column(12,uiOutput("l2_txt"))),
+             fluidRow(column(12,uiOutput("diagdrug_txt1"))),
+             fluidRow(column(12,uiOutput("diagdrug_txt2"))),
              fluidRow(column(4,uiOutput('slt_diag_np')), column(4,uiOutput('slt_drug_np'))),
   
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc","Procedures", "",'100%' ,'100px')),
@@ -47,6 +60,13 @@ server <- function(input, output, session) {
   
   
   output$titletext <- renderUI({HTML(paste('<p style="font-size:25px;"><br><b>DR Patient Medical Recorder/Viewer Tool<b></p><br>'))})
+  
+  output$vitals_txt <- renderUI({HTML(paste('<p style="font-size:15px;"><br><b>VITALS<b></p><br>'))})
+  output$l1_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
+  output$l2_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
+  
+  output$diagdrug_txt1 <- renderUI({HTML(paste('<p style="font-size:15px;"><br><b>Enter Diagnosis and Select Corresponding Drug</b></p>'))})
+  output$diagdrug_txt2 <- renderUI({HTML(paste('<p style="font-size:12px;">NOTE: you may submit as many diagnoses as needed per patient<b></p><br>'))})
   
   output$slt_diag <- renderUI({
     
