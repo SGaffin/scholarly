@@ -1,0 +1,41 @@
+﻿Test,Result
+Specific Gravity,1
+Specific Gravity,1.005
+Specific Gravity,1.01
+Specific Gravity,1.015
+Specific Gravity,1.02
+Specific Gravity,1.025
+Specific Gravity,1.03
+pH,5
+pH,6
+pH,7
+pH,8
+pH,9
+Leukocytes,neg
+Leukocytes,trace
+Leukocytes,+
+Leukocytes,++
+Nitrite,neg
+Nitrite,pos
+Protein,neg
+Protein,trace
+Glucose,(+) 30
+Glucose,(++) 100
+Glucose,(+++) 500
+Ketones,neg
+Ketones,(+) small
+Ketones,(++) mod
+Ketones,(+++) large
+Urobilinogen,normal
+Urobilinogen,1
+Urobilinogen,4
+Urobilinogen,8
+Urobilinogen,12
+Bilirubin,neg
+Bilirubin,+
+Bilirubin,++
+Bilirubin,+++
+Blood/Hemoglobin,neg
+Blood/Hemoglobin,trace
+Blood/Hemoglobin,about 50
+Blood/Hemoglobin,about 250 Ery/µL
