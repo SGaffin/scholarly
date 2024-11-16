@@ -22,15 +22,17 @@ db_path = r'./data/dr_patient_data_23.db'
 # patient_data_entry = patient_data_entry.rename(columns = {'index':'patient_id'})
 # patient_data_entry_cache = patient_data_entry
 #------------------------
-# vitals = pd.DataFrame(columns = ['patient_id','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
-# dummyentry = pd.DataFrame([['0','25','F','68','120/80','16', '98', '125', np.nan]])
+
+
+# vitals = pd.DataFrame(columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+# dummyentry = pd.DataFrame([['0','jane','doe','25','F','68','120/80','16', '98', '125', pd.to_datetime('1/30/1986')]])
 # dummyentry.columns = vitals.columns
 # vitals = vitals._append(dummyentry)
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
 # # c.execute("""DROP TABLE patient_vitals """)
-# c.execute("""CREATE TABLE patient_vitals (patient_id, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime)""")
+# c.execute("""CREATE TABLE patient_vitals (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime)""")
 # conn.commit()
 # conn.close()
 
