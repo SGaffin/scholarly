@@ -56,39 +56,15 @@ lab_results = lab_results.rename(columns = {'index':'lab_id'})
 #---------------------------------------------------------------
 
 #------------------------
-# diag_dose = patient_data_entry[['patient_id','diagnosis_1', 'drug_1', 'diagnosis_2', 'drug_2', 'diagnosis_3', 'drug_3', 'diagnosis_4', 'drug_4']]
-# diag_dose_clean = pd.DataFrame(columns=['patient_id', 'diagnosis', 'drug'])
-# for i in range(len(diag_dose)):
-#     temp = pd.DataFrame(columns=['patient_id', 'diagnosis', 'drug'])
-#     for j in range(4):
-#         temp.loc[j,'patient_id'] = diag_dose.loc[i,'patient_id']
-#         temp.loc[j,'diagnosis'] = diag_dose.loc[i,'diagnosis_' + str(j + 1)]
-#         temp.loc[j,'drug'] = diag_dose.loc[i,'drug_' + str(j + 1)]
-#     diag_dose_clean = diag_dose_clean._append(temp)
-# diag_dose_clean = diag_dose_clean[~(diag_dose_clean['diagnosis'].isna())]
-# diag_dose_clean = diag_dose_clean.reset_index(drop = True)
-
-# diag_dose = diag_dose_clean.merge(diagtest, how = 'left', on = ['diagnosis'])
-# diag_dose = diag_dose.rename(columns = {'id':'diagnosis_id'})
-# diag_dose = diag_dose.reset_index(drop = True)
-
-# diag_dose = diag_dose.merge(drugtest, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
-# diag_dose = diag_dose.rename(columns={'id':'drug_id'})
-# diag_dose.loc[:,'notes'] = np.nan
-# diag_dose.loc[:,'patient_id'] = diag_dose.loc[:,'patient_id'].astype(int)
-
-# diag_dose = diag_dose[['patient_id','diagnosis_id', 'drug_id', 'notes']]
-
+# dummyentry = pd.DataFrame([[0,17,27,'testing procedures field', 'testing notes field']], columns = ['patient_id','diagnosis_id', 'drug_id', 'procs', 'notes'])
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# # c.execute("""CREATE TABLE patient_diag_drug (patient_id, diagnosis_id, drug_id, notes)""")
-# # c.execute("""UPDATE patient_diag_drug SET notes = CAST(notes AS TEXT)""")  #example of setting the datatype of column after table has already been created
-# c.execute("""DELETE FROM patient_diag_drug where patient_id != 0""")
+# c.execute("""CREATE TABLE patient_diag_drug (patient_id, diagnosis_id, drug_id, procs, notes)""")
 # conn.commit()
 # conn.close()
 
 # conn = sqlite3.connect(db_path)
-# diag_dose.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
+# dummyentry.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
 # conn.commit()
 # conn.close()
 
