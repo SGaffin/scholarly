@@ -86,19 +86,36 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes""")
+    c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes)""")
     conn.commit()
     conn.close()
     
-    pv_temp = pd.DataFrame([[0, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight,datetime.date.today()]],
-                           columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    di = c.execute("""SELECT * FROM diagnosis_index WHERE diagnosis = """ + diagnosis)
+    didata = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(di.description)[0])
+    didata.columns = cols
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    dri = c.execute("""SELECT * FROM drug_index WHERE drug_name = """ + drug)
+    dridata = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(dri.description)[0])
+    dridata.columns = cols
+    
+    ddt = pd.DataFrame([[0, diagnosis, drug, procs, notes]], columns = ['patient_id', 'diagnosis', 'drug', 'procs', 'notes'])
+    ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
+    ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
+    
+    ddt = ddt[['patient_id', 'diagnosis_id', 'drug_id', 'procs', 'notes']]
 
     conn = sqlite3.connect(db_path)
-    pv_temp.to_sql('patient_vitals_temp', conn, if_exists='append', index=False)
+    ddt.to_sql('patient_diag_drug_temp', conn, if_exists='append', index=False)
     conn.commit()
     conn.close()    
     
-    return(pv_temp)
+    return(ddt)
 
 
 
