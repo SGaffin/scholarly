@@ -37,12 +37,13 @@ ui <- fluidPage(
              fluidRow(column(2, textInput("bp_input","Blood Pressure", "",)), 
                       column(2, style='padding-left:0px;', textInput("rr_input","Resp Rate", "",)),
                       column(2, style='padding-left:0px;', textInput("o2s_input","O2 Sat", "",))),
-             fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_vitals_btn", "Save Vitals", style="background-color: gray; border-color: #2e6da4")), column(2,uiOutput('patient_vitals_temp'))),
+             fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_vitals_btn", "Save Vitals", style="background-color: gray; border-color: #2e6da4"))),
+             fluidRow(column(2,uiOutput('patient_vitals_temp'))),
              fluidRow(column(12,uiOutput("l2_txt"))),
              fluidRow(column(12,uiOutput("diagdrug_txt1"))),
              fluidRow(column(12,uiOutput("diagdrug_txt2"))),
-             fluidRow(column(4,uiOutput('slt_diag_np')), column(4, style='padding-left:0px;',uiOutput('slt_drug_np'))),
-  
+             
+             fluidRow(column(2,uiOutput('slt_diag_np')), column(2, style='padding-left:0px;',uiOutput('slt_drug_np'))),
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc_txt","Procedures", "",'100%' ,'100px')),
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("notes_txt","Notes", "",'100%' ,'100px')),
              
@@ -70,19 +71,39 @@ server <- function(input, output, session) {
   output$diagdrug_txt1 <- renderUI({HTML(paste('<p style="font-size:15px;"><br><b>Enter Diagnosis and Select Corresponding Drug</b></p>'))})
   output$diagdrug_txt2 <- renderUI({HTML(paste('<p style="font-size:12px;">NOTE: you may submit as many diagnoses as needed per patient<b></p><br>'))})
   
-  
-  observeEvent(input$save_vitals_btn, {
-                                        output$patient_vitals_temp <- renderUI({
-                                          pvtemp <- diagdrug_pull$patient_vitals_staging(toString(input$fname_input),toString(input$lname_input),toString(input$age_input),
-                                                                                         toString(input$sex_input),toString(input$wt_input),toString(input$hr_input),
-                                                                                         toString(input$bp_input),toString(input$rr_input),toString(input$o2s_input))
-                                           pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
-
-                                           renderDT(pvtemp, rownames = FALSE, options = list(dom = 't'))
-                                        })
+  isolate({
+    fname <- reactive(input$fname_input)
+    lname <- reactive(input$lname_input)
+    age <- reactive(input$age_input)
+    sex <- reactive(input$sex_input)
+    wt <- reactive(input$wt_input)
+    hr <- reactive(input$hr_input)
+    bp <- reactive(input$bp_input)
+    rr <- reactive(input$rr_input)
+    o2s <- reactive(input$o2s_input)
   })
+
+
+  # observeEvent(input$save_vitals_btn, {output$patient_vitals_temp <- renderUI({pvtemp <- diagdrug_pull$patient_vitals_staging(fname(),lname(),age(),
+  #                                                                                                                              sex(),wt(),hr(),
+  #                                                                                                                              bp(),rr(),o2s())
+  #                                                                               pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
+  #                                                                               renderDT(pvtemp, rownames = FALSE, options = list(dom = 't'))
+  #                                       })
+  # })
+
+
+  output$patient_vitals_temp <- renderUI({input$save_vitals_btn
+    
+                                          pvtemp <- diagdrug_pull$patient_vitals_staging(isolate(input$fname_input),isolate(lname()),isolate(age()),
+                                                                                         isolate(sex()),isolate(wt()),isolate(hr()),
+                                                                                         isolate(bp()),isolate(rr()),isolate(o2s()))
+                                          pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
+                                          renderDT(pvtemp, rownames = FALSE, options = list(dom = 't'))
+                                          })
   
-  # observeEvent(input$save_vitals_btn, {output$test_txt1 <- renderUI({HTML(paste('<p style="font-size:15px;"><br><b>',input$fname_input,'</b></p>'))})})
+  
+  
   
   output$slt_diag <- renderUI({
     

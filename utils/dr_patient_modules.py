@@ -71,3 +71,34 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_temp)
 
 
+def diag_drug_staging(diagnosis, drug, procs, notes):
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_diag_drug_temp""")
+        conn.commit()
+        conn.close()
+    except:
+        print('temp patient_diag_drug table did not exist')
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes""")
+    conn.commit()
+    conn.close()
+    
+    pv_temp = pd.DataFrame([[0, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight,datetime.date.today()]],
+                           columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+
+    conn = sqlite3.connect(db_path)
+    pv_temp.to_sql('patient_vitals_temp', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()    
+    
+    return(pv_temp)
+
+
+
