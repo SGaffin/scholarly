@@ -9,11 +9,9 @@ library(reticulate)
 use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 
 diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents/GitHub/scholarly/utils")
-# diagdrug_pull <- import_from_path("dr_patient_modules","./utils/")
 
-# diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
-# meds <- rbind(diagnosis_drug_ref$drug_name[diagnosis_drug_ref$diagnosis=="Pain"])
-# dist <- rbind(diagnosis_drug_ref$distribution[diagnosis_drug_ref$drug_name=='Acetaminophen (children)'])
+#make this run every time app is refreshed
+cleartemps <- diagdrug_pull$cleartemps()
 
 ui <- fluidPage(
   
@@ -46,6 +44,9 @@ ui <- fluidPage(
              fluidRow(column(2,uiOutput('slt_diag_np')), column(2, style='padding-left:0px;',uiOutput('slt_drug_np'))),
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc_txt","Procedures", "",'100%' ,'100px')),
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("notes_txt","Notes", "",'100%' ,'100px')),
+             fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_diagdrug_btn", "Add Diagnosis", style="background-color: gray; border-color: #2e6da4"))),
+             fluidRow(column(2,uiOutput('patient_diag_drug_temp'))),
+             fluidRow(column(3,uiOutput('br_text2')))
              
              ),
     tabPanel('Record Viewer',
@@ -71,37 +72,15 @@ server <- function(input, output, session) {
   output$diagdrug_txt1 <- renderUI({HTML(paste('<p style="font-size:15px;"><br><b>Enter Diagnosis and Select Corresponding Drug</b></p>'))})
   output$diagdrug_txt2 <- renderUI({HTML(paste('<p style="font-size:12px;">NOTE: you may submit as many diagnoses as needed per patient<b></p><br>'))})
   
-  isolate({
-    fname <- reactive(input$fname_input)
-    lname <- reactive(input$lname_input)
-    age <- reactive(input$age_input)
-    sex <- reactive(input$sex_input)
-    wt <- reactive(input$wt_input)
-    hr <- reactive(input$hr_input)
-    bp <- reactive(input$bp_input)
-    rr <- reactive(input$rr_input)
-    o2s <- reactive(input$o2s_input)
-  })
-
-
-  # observeEvent(input$save_vitals_btn, {output$patient_vitals_temp <- renderUI({pvtemp <- diagdrug_pull$patient_vitals_staging(fname(),lname(),age(),
-  #                                                                                                                              sex(),wt(),hr(),
-  #                                                                                                                              bp(),rr(),o2s())
-  #                                                                               pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
-  #                                                                               renderDT(pvtemp, rownames = FALSE, options = list(dom = 't'))
-  #                                       })
-  # })
-
 
   output$patient_vitals_temp <- renderUI({input$save_vitals_btn
     
-                                          pvtemp <- diagdrug_pull$patient_vitals_staging(isolate(input$fname_input),isolate(lname()),isolate(age()),
-                                                                                         isolate(sex()),isolate(wt()),isolate(hr()),
-                                                                                         isolate(bp()),isolate(rr()),isolate(o2s()))
+                                          pvtemp <- diagdrug_pull$patient_vitals_staging(isolate(input$fname_input),isolate(input$lname_input),isolate(input$age_input),
+                                                                                         isolate(input$sex_input),isolate(input$wt_input),isolate(input$hr_input),
+                                                                                         isolate(input$bp_input),isolate(input$rr_input),isolate(input$o2s_input))
                                           pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
                                           renderDT(pvtemp, rownames = FALSE, options = list(dom = 't'))
                                           })
-  
   
   
   
@@ -111,7 +90,7 @@ server <- function(input, output, session) {
     diagnosis_choices <- diagnosis_drug_ref$diagnosis
     
     
-    selectInput("slt_diag", 
+    selectInput("sltdiag", 
                 "Select Diagnosis", 
                 choices = diagnosis_choices)#c("euro", "mtcars", "iris"))
     
@@ -123,12 +102,25 @@ server <- function(input, output, session) {
     diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
     meds <- rbind(diagnosis_drug_ref$drug_name[diagnosis_drug_ref$diagnosis==input$slt_diag])
     
-    selectInput("slt_med", 
+    selectInput("sltmed", 
                 "Select Drug", 
                 choices = meds)#c("euro", "mtcars", "iris"))
     })
+  
 
-
+  output$patient_diag_drug_temp <- renderUI({input$save_diagdrug_btn
+    
+                                              pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np),isolate(input$proc_txt),isolate(input$notes_txt))
+                                              pddemp <- pddemp[c("diagnosis","drug","procs", "notes")]
+                                              
+                                              updateTextAreaInput(session, "proc_txt", value = "")
+                                              updateTextAreaInput(session, "notes_txt", value = "")
+                                              
+                                              renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))
+    
+                                              })
+  
+  
 
   output$distribution_txt <- renderUI({
     
@@ -172,6 +164,7 @@ server <- function(input, output, session) {
   
   
   output$br_text <- renderUI({HTML(paste('<br>'))})
+  output$br_text2 <- renderUI({HTML(paste('<br><br><br><br>'))})
   
   output$slt_diag_np <- renderUI({
     
@@ -192,7 +185,7 @@ server <- function(input, output, session) {
     
     selectInput("slt_drug_np", 
                 "Select Drug", 
-                choices = meds)#c("euro", "mtcars", "iris"))
+                choices = meds)
   })
   
   

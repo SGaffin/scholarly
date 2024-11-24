@@ -3,6 +3,26 @@ import numpy as np
 import sqlite3
 import datetime
 
+def cleartemps():
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("""DROP TABLE patient_vitals_temp""")
+    conn.commit()
+    conn.close()
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("""DROP TABLE patient_diag_drug_temp""")
+    conn.commit()
+    conn.close()
+    
+    r = 'temp tables dropped'
+    
+    return(r)
+
 
 def diagdrug_pull():
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
@@ -75,31 +95,34 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
+    # try:
+    #     conn = sqlite3.connect(db_path)
+    #     c = conn.cursor()
+    #     c.execute("""DROP TABLE patient_diag_drug_temp""")
+    #     conn.commit()
+    #     conn.close()
+    # except:
+    #     print('temp patient_diag_drug table did not exist')
+    
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""DROP TABLE patient_diag_drug_temp""")
+        c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes)""")
         conn.commit()
         conn.close()
-    except:
-        print('temp patient_diag_drug table did not exist')
+    except: 
+        print('temp patient_diag_drug table already exists')
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes)""")
-    conn.commit()
-    conn.close()
-    
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    di = c.execute("""SELECT * FROM diagnosis_index WHERE diagnosis = """ + diagnosis)
+    di = c.execute("""SELECT id AS diagnosis_id, diagnosis FROM diagnosis_index WHERE diagnosis = '""" + str(diagnosis) + """'""")
     didata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(di.description)[0])
     didata.columns = cols
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    dri = c.execute("""SELECT * FROM drug_index WHERE drug_name = """ + drug)
+    dri = c.execute("""SELECT id AS drug_id, drug_name FROM drug_index WHERE drug_name = '""" + str(drug) + """'""")
     dridata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(dri.description)[0])
     dridata.columns = cols
@@ -108,6 +131,7 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
     ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
     
+    ddt_return = ddt[['diagnosis', 'drug', 'procs', 'notes']]
     ddt = ddt[['patient_id', 'diagnosis_id', 'drug_id', 'procs', 'notes']]
 
     conn = sqlite3.connect(db_path)
@@ -115,7 +139,23 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     conn.commit()
     conn.close()    
     
-    return(ddt)
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    ddtc = c.execute("""SELECT diagnosis, drug_name AS drug, procs, notes
+                        FROM patient_diag_drug_temp ddt
+                        LEFT JOIN(SELECT *
+                                  FROM diagnosis_index) di
+                        ON ddt.diagnosis_id = di.id
+                        LEFT JOIN(SELECT *
+                                  FROM drug_index) dri
+                        ON ddt.drug_id = dri.id""")
+    ddt_return = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(ddtc.description)[0])
+    ddt_return.columns = cols
+    
+    # ddt_return = pd.DataFrame([[diagnosis, drug, procs, notes]])
+    
+    return(ddt_return)
 
 
 
