@@ -1,43 +1,43 @@
-﻿Test,Result
-Specific Gravity,1
-Specific Gravity,1.005
-Specific Gravity,1.01
-Specific Gravity,1.015
-Specific Gravity,1.02
-Specific Gravity,1.025
-Specific Gravity,1.03
-pH,5
-pH,6
-pH,7
-pH,8
-pH,9
-Leukocytes,neg
-Leukocytes,trace
-Leukocytes,+
-Leukocytes,++
-Nitrite,neg
-Nitrite,pos
-Protein,neg
-Protein,trace
-Glucose,(+) 30
-Glucose,(++) 100
-Glucose,(+++) 500
-Ketones,neg
-Ketones,(+) small
-Ketones,(++) mod
-Ketones,(+++) large
-Urobilinogen,normal
-Urobilinogen,1
-Urobilinogen,4
-Urobilinogen,8
-Urobilinogen,12
-Bilirubin,neg
-Bilirubin,+
-Bilirubin,++
-Bilirubin,+++
-Blood/Hemoglobin,neg
-Blood/Hemoglobin,trace
-Blood/Hemoglobin,about 50
-Blood/Hemoglobin,about 250 Ery/µL
-HCG,+
-HCG,-
+﻿lab_id,Test,Result
+1,Specific Gravity,1
+1,Specific Gravity,1.005
+1,Specific Gravity,1.01
+1,Specific Gravity,1.015
+1,Specific Gravity,1.02
+1,Specific Gravity,1.025
+1,Specific Gravity,1.03
+2,pH,5
+2,pH,6
+2,pH,7
+2,pH,8
+2,pH,9
+3,Leukocytes,neg
+3,Leukocytes,trace
+3,Leukocytes,+
+3,Leukocytes,++
+4,Nitrite,neg
+4,Nitrite,pos
+5,Protein,neg
+5,Protein,trace
+6,Glucose,(+) 30
+6,Glucose,(++) 100
+6,Glucose,(+++) 500
+7,Ketones,neg
+7,Ketones,(+) small
+7,Ketones,(++) mod
+7,Ketones,(+++) large
+8,Urobilinogen,normal
+8,Urobilinogen,1
+8,Urobilinogen,4
+8,Urobilinogen,8
+8,Urobilinogen,12
+9,Bilirubin,neg
+9,Bilirubin,+
+9,Bilirubin,++
+9,Bilirubin,+++
+10,Blood/Hemoglobin,neg
+10,Blood/Hemoglobin,trace
+10,Blood/Hemoglobin,about 50
+10,Blood/Hemoglobin,about 250 Ery/µL
+11,HCG,+
+11,HCG,-

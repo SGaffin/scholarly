@@ -7,17 +7,33 @@ def cleartemps():
     
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("""DROP TABLE patient_vitals_temp""")
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_vitals_temp""")
+        conn.commit()
+        conn.close()
+    except:
+        print('patient_vitals_temp did not exist')
     
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute("""DROP TABLE patient_diag_drug_temp""")
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_diag_drug_temp""")
+        conn.commit()
+        conn.close()
+    except:
+        print('patient_diag_drug_temp did not exist')
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_lab_results_temp""")
+        conn.commit()
+        conn.close()
+    except:
+        print('patient_diag_drug_temp did not exist')
+    
     
     r = 'temp tables dropped'
     
@@ -41,6 +57,22 @@ def diagdrug_pull():
     diag_drug_test.columns = cols
     
     return(diag_drug_test)
+
+
+def lab_tests_pull():
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    lab_res_qry = c.execute("""SELECT * 
+                                 FROM lab_results_index""")
+    lab_res = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lab_res_qry.description)[0])
+    lab_res.columns = cols
+    
+    return(lab_res)
+    
+
     
 def patientrecord_pull():
     
@@ -88,7 +120,14 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     conn.commit()
     conn.close()    
     
-    return(pv_temp)
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    pv = c.execute("""SELECT * FROM patient_vitals_temp""")
+    pv_return = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(pv.description)[0])
+    pv_return.columns = cols
+    
+    return(pv_return)
 
 
 def diag_drug_staging(diagnosis, drug, procs, notes):
@@ -156,6 +195,50 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     # ddt_return = pd.DataFrame([[diagnosis, drug, procs, notes]])
     
     return(ddt_return)
+
+def lab_results_staging(lab_name, lab_value):
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+        
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""CREATE TABLE patient_lab_results_temp (patient_id, lab_id, lab_value)""")
+        conn.commit()
+        conn.close()
+    except: 
+        print('temp patient_lab_results table already exists')
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    lri = c.execute("""SELECT DISTINCT lab_id, lab_name FROM lab_results_index WHERE lab_name = '""" + str(lab_name) + """'""")
+    lridata = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lri.description)[0])
+    lridata.columns = cols
+    
+    lrt = pd.DataFrame([[0, lab_name, lab_value]], columns = ['patient_id', 'lab_name', 'lab_value'])
+    lrt = lrt.merge(lridata, how = 'left', on = ['lab_name'])
+    lrt = lrt[['patient_id', 'lab_id', 'lab_value']]
+
+    conn = sqlite3.connect(db_path)
+    lrt.to_sql('patient_lab_results_temp', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()    
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    lrtc = c.execute("""SELECT lab_name, lrt.lab_value
+                        FROM patient_lab_results_temp lrt
+                        LEFT JOIN(SELECT DISTINCT lab_id, lab_name
+                                  FROM lab_results_index) lri
+                        ON lrt.lab_id = lri.lab_id""")
+    lrt_return = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lrtc.description)[0])
+    lrt_return.columns = cols
+    
+    # ddt_return = pd.DataFrame([[diagnosis, drug, procs, notes]])
+    
+    return(lrt_return)
 
 
 
