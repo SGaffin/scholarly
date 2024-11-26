@@ -32,7 +32,7 @@ def cleartemps():
         conn.commit()
         conn.close()
     except:
-        print('patient_diag_drug_temp did not exist')
+        print('patient_lab_results_temp did not exist')
     
     
     r = 'temp tables dropped'
@@ -130,7 +130,7 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_return)
 
 
-def diag_drug_staging(diagnosis, drug, procs, notes):
+def diag_drug_staging(diagnosis, drug):
     
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
@@ -146,7 +146,7 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id, procs, notes)""")
+        c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id)""")
         conn.commit()
         conn.close()
     except: 
@@ -166,12 +166,12 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     cols = list(pd.DataFrame(dri.description)[0])
     dridata.columns = cols
     
-    ddt = pd.DataFrame([[0, diagnosis, drug, procs, notes]], columns = ['patient_id', 'diagnosis', 'drug', 'procs', 'notes'])
+    ddt = pd.DataFrame([[0, diagnosis, drug]], columns = ['patient_id', 'diagnosis', 'drug'])
     ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
     ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
     
-    ddt_return = ddt[['diagnosis', 'drug', 'procs', 'notes']]
-    ddt = ddt[['patient_id', 'diagnosis_id', 'drug_id', 'procs', 'notes']]
+    ddt_return = ddt[['diagnosis', 'drug']]
+    ddt = ddt[['patient_id', 'diagnosis_id', 'drug_id']]
 
     conn = sqlite3.connect(db_path)
     ddt.to_sql('patient_diag_drug_temp', conn, if_exists='append', index=False)
@@ -180,7 +180,7 @@ def diag_drug_staging(diagnosis, drug, procs, notes):
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    ddtc = c.execute("""SELECT diagnosis, drug_name AS drug, procs, notes
+    ddtc = c.execute("""SELECT diagnosis, drug_name AS drug
                         FROM patient_diag_drug_temp ddt
                         LEFT JOIN(SELECT *
                                   FROM diagnosis_index) di
