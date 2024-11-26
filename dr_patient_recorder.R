@@ -9,7 +9,6 @@ library(reticulate)
 use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 
 diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents/GitHub/scholarly/utils")
-pddemp <- diagdrug_pull$diag_drug_staging("Pain","Acetaminophen","test","test")
 
 #make this run every time app is refreshed
 cleartemps <- diagdrug_pull$cleartemps()
@@ -36,8 +35,8 @@ ui <- fluidPage(
              fluidRow(column(2, textInput("bp_input","Blood Pressure", "",)), 
                       column(2, style='padding-left:0px;', textInput("rr_input","Resp Rate", "",)),
                       column(2, style='padding-left:0px;', textInput("o2s_input","O2 Sat", "",))),
-             fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_vitals_btn", "Save Vitals", style="background-color: gray; border-color: #2e6da4"))),
-             fluidRow(column(12,uiOutput('patient_vitals_temp'))),
+             # fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_vitals_btn", "Save Vitals", style="background-color: gray; border-color: #2e6da4"))),
+             # fluidRow(column(12,uiOutput('patient_vitals_temp'))),
              fluidRow(column(12,uiOutput("l2_txt"))),
              fluidRow(column(12,uiOutput("labres_txt1"))),
              fluidRow(column(3,uiOutput('slt_lab_name')), column(2, style='padding-left:0px;',uiOutput('slt_lab_val'))),
@@ -48,10 +47,15 @@ ui <- fluidPage(
              fluidRow(column(12,uiOutput("diagdrug_txt2"))),
              
              fluidRow(column(2,uiOutput('slt_diag_np')), column(2, style='padding-left:0px;',uiOutput('slt_drug_np'))),
-             fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc_txt","Procedures", "",'100%' ,'100px')),
-             fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("notes_txt","Notes", "",'100%' ,'100px')),
              fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_diagdrug_btn", "Add Diagnosis", style="background-color: gray; border-color: #2e6da4"))),
              fluidRow(column(12,uiOutput('patient_diag_drug_temp'))),
+             fluidRow(column(12,uiOutput("l4_txt"))),
+             fluidRow(column(12,uiOutput("proc_note_txt"))),
+             fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc_txt","Procedures", "",'100%' ,'100px')),
+             fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("notes_txt","Notes", "",'100%' ,'100px')),
+             fluidRow(column(12,uiOutput("l5_txt"))),
+             fluidRow(column(12,uiOutput("glasses_txt"))),
+             fluidRow(column(2,uiOutput('slt_glasses'))),
              fluidRow(column(3,uiOutput('br_text2')))
              
              ),
@@ -78,8 +82,11 @@ server <- function(input, output, session) {
   output$l3_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
   output$diagdrug_txt1 <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Enter Diagnosis and Select Corresponding Drug</b></p>'))})
   output$diagdrug_txt2 <- renderUI({HTML(paste('<p style="font-size:12px;">NOTE: you may submit as many diagnoses as needed per patient<b></p><br>'))})
+  output$l4_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
+  output$proc_note_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Procedures & Notes<b></p><br>'))})
+  output$l5_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
+  output$glasses_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Glasses<b></p><br>'))})
   
-
   output$patient_vitals_temp <- renderUI({input$save_vitals_btn
     
                                           tryCatch(
@@ -89,7 +96,7 @@ server <- function(input, output, session) {
                                                     print(toString(nrow(pvtemp)))
                                                     pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
                                                     renderDT(pvtemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))},
-                                            error = function(e){HTML(paste0('<br><p style="font-size:12px;">No entries have been saved</p>'))}
+                                            error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
                                             )
                                           })
   
@@ -122,15 +129,15 @@ server <- function(input, output, session) {
   output$patient_diag_drug_temp <- renderUI({input$save_diagdrug_btn
 
                                             tryCatch(
-                                              expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np),isolate(input$proc_txt),isolate(input$notes_txt))
-                                                      pddemp <- pddemp[c("diagnosis","drug","procs", "notes")]
+                                              expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np))
+                                                      pddemp <- pddemp[c("diagnosis","drug")]
                                         
-                                                      updateTextAreaInput(session, "proc_txt", value = "")
-                                                      updateTextAreaInput(session, "notes_txt", value = "")
+                                                      # updateTextAreaInput(session, "proc_txt", value = "")
+                                                      # updateTextAreaInput(session, "notes_txt", value = "")
                                         
                                                       renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))
                                                       },
-                                              error = function(e){HTML(paste0('<br><p style="font-size:12px;">No entries have been saved</p>'))}
+                                              error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
                                             )
 
                                               })
@@ -143,7 +150,7 @@ server <- function(input, output, session) {
               plrtemp <- plrtemp[c("lab_name","lab_value")]
               renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))
               },
-      error = function(e){HTML(paste0('<br><p style="font-size:12px;">No entries have been saved</p>'))}
+      error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
       )
     
   })
@@ -220,7 +227,7 @@ server <- function(input, output, session) {
     
     selectInput("slt_drug_np", 
                 "Select Drug", 
-                choices = c(" ", meds))
+                choices = meds)
   })
   
   
@@ -249,6 +256,13 @@ server <- function(input, output, session) {
     
   })
   
+  output$slt_glasses <- renderUI({
+    
+    selectInput("slt_glasses", 
+                "Select Glasses", 
+                choices = c("No Glasses","1.00","1.25","1.5","1.75","2.00","2.25","2.5","2.75","3.00","3.25","3.5","3.75","4.00"))
+    
+  })
   
   
 }
