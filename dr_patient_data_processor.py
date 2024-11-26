@@ -49,24 +49,29 @@ cols = list(pd.DataFrame(pdd.description)[0])
 pdddata.columns = cols
 #------------------------
 
-#lab results (steven)----------------------------]
-lab_results = pd.read_csv('./data/init_data/Urine_lab_values.csv')
-lab_results = lab_results.reset_index()
-lab_results = lab_results.rename(columns = {'index':'lab_id'})
+
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+pdd = c.execute("SELECT * FROM sqlite_master WHERE type='table'")
+tbls = pd.DataFrame(c.fetchall())
+cols = list(pd.DataFrame(pdd.description)[0])
+tbls.columns = cols
 #---------------------------------------------------------------
 
 #------------------------
-# dummyentry = pd.DataFrame([[0,17,27,'testing procedures field', 'testing notes field']], columns = ['patient_id','diagnosis_id', 'drug_id', 'procs', 'notes'])
-# conn = sqlite3.connect(db_path)
-# c = conn.cursor()
-# c.execute("""CREATE TABLE patient_diag_drug (patient_id, diagnosis_id, drug_id, procs, notes)""")
-# conn.commit()
-# conn.close()
+dummyentry = pd.DataFrame([[0,17,27]], columns = ['patient_id','diagnosis_id', 'drug_id'])
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+c.execute("""CREATE TABLE patient_diag_drug (patient_id, diagnosis_id, drug_id)""")
+# c.execute("""DROP TABLE patient_diag_drug""")
+conn.commit()
+conn.close()
 
-# conn = sqlite3.connect(db_path)
-# dummyentry.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
-# conn.commit()
-# conn.close()
+conn = sqlite3.connect(db_path)
+dummyentry.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
+conn.commit()
+conn.close()
 
 conn = sqlite3.connect(db_path)
 c = conn.cursor()
@@ -126,6 +131,30 @@ pdddata.columns = cols
 
 
 #------------------------
+#lab results (steven)----------------------------]
+# lab_results = pd.read_csv('./data/init_data/Urine_lab_values.csv')
+# lab_results = lab_results.rename(columns = {'Test':'lab_name', 'Result':'lab_value'})
+
+# conn = sqlite3.connect(db_path)
+# c = conn.cursor()
+# c.execute("""CREATE TABLE lab_results_index (lab_id, lab_name, lab_value)""")
+# # c.execute("""DROP TABLE lab_results_index""")
+# conn.commit()
+# conn.close()
+
+# conn = sqlite3.connect(db_path)
+# lab_results.to_sql('lab_results_index', conn, if_exists='append', index=False)
+# conn.commit()
+# conn.close()
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+lri = c.execute('SELECT * FROM lab_results_index')
+lridata = pd.DataFrame(c.fetchall())
+cols = list(pd.DataFrame(lri.description)[0])
+lridata.columns = cols
+
+
 # lab_results = patient_data_entry[['patient_id','Lab_Result_1','Lab_Result_2','Lab_Result_3']]
 # lab_results_clean = pd.DataFrame(columns=['patient_id', 'lab_name', 'lab_value'])
 # for i in range(len(lab_results)):
@@ -139,13 +168,15 @@ pdddata.columns = cols
 # lab_results_clean = lab_results_clean.reset_index(drop = True)
 # lab_results_clean.loc[:,'patient_id'] = lab_results_clean.loc[:,'patient_id'].astype(int) 
 
+
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE patient_lab_results (patient_id, lab_name, lab_value)""")
+# c.execute("""CREATE TABLE patient_lab_results (patient_id, lab_id, lab_value)""")
+# # c.execute("""DROP TABLE patient_lab_results""")
 # conn.commit()
 # conn.close()
 
-# dummyentry=pd.DataFrame([[0,5,1.025]],columns=['patient_id', 'lab_name', 'lab_value'])
+# dummyentry=pd.DataFrame([[0,5,1.025]],columns=['patient_id', 'lab_id', 'lab_value'])
 
 # conn = sqlite3.connect(db_path)
 # dummyentry.to_sql('patient_lab_results', conn, if_exists='append', index=False)
@@ -184,6 +215,28 @@ cols = list(pd.DataFrame(gl.description)[0])
 gldata.columns = cols
 #------------------------
 
+#------------------------
+dummyentry = pd.DataFrame([[0, 'test procs', 'test notes']],columns=['patient_id', 'procs', 'notes'])
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+c.execute("""CREATE TABLE patient_procs_notes (patient_id, procs, notes)""")
+conn.commit()
+conn.close()
+
+conn = sqlite3.connect(db_path)
+dummyentry.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
+conn.commit()
+conn.close()
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+ppn = c.execute('SELECT * FROM patient_procs_notes')
+ppndata = pd.DataFrame(c.fetchall())
+cols = list(pd.DataFrame(ppn.description)[0])
+ppndata.columns = cols
+#------------------------
+
 
 
 
@@ -208,9 +261,9 @@ drug_read.columns = ['id','drug_name','dosage']
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE drug_index (id, drug_name, dosage)""")
+# # c.execute("""CREATE TABLE drug_index (id, drug_name, dosage)""")
 # ###c.execute("""DELETE FROM drug_index WHERE drug_name = 'Ibuprofen' """)
-# ###c.execute("""UPDATE drug_index SET drug_name = 'Enalapril' WHERE drug_name = 'Enalapril '  """)
+# c.execute("""UPDATE drug_index SET drug_name = 'Ibuprofen' WHERE drug_name = 'Ibuprofen '  """)
 # conn.commit()
 # conn.close()
 
