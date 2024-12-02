@@ -241,4 +241,122 @@ def lab_results_staging(lab_name, lab_value):
     return(lrt_return)
 
 
+def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses):
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    pdd = c.execute('SELECT MAX(patient_id) as last_id FROM patient_vitals')
+    pdddata = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(pdd.description)[0])
+    pdddata.columns = cols
+    
+    patient_id = int(pdddata.loc[0,'last_id']) + 1
+    
+    #patient vitals section-------------------------------------------------------------
+    dt = pd.to_datetime('now').strftime("%Y-%m-%d %H:%M:%S")
+    
+    pv = pd.DataFrame([[patient_id, fname, lname, age, sex, hr, bp, rr, o2sat, weight, dt]], 
+                      columns = ['patient_id', 'first_name', 'last_name', 'age', 'sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+    
 
+    conn = sqlite3.connect(db_path)
+    pv.to_sql('patient_vitals', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()    
+
+    #patient lab results section--------------------------------------------------------
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        lrt = c.execute('SELECT * FROM patient_lab_results_temp')
+        lrtdata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(lrt.description)[0])
+        lrtdata.columns = cols
+    
+        lrtdata.loc[:,'patient_id'] = patient_id
+        
+        conn = sqlite3.connect(db_path)
+        lrtdata.to_sql('patient_lab_results', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()    
+
+    except:
+        print("No labs performed")
+    
+    #patient diagnosis & drug section----------------------------------------------------
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    pdd = c.execute('SELECT * FROM patient_diag_drug_temp')
+    pdddata = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(pdd.description)[0])
+    pdddata.columns = cols
+    
+    pdddata.loc[:,'patient_id'] = patient_id
+    
+    conn = sqlite3.connect(db_path)
+    pdddata.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()    
+    
+    #patient procedures and notes section----------------------------------------------------
+    
+    ppn = pd.DataFrame([[patient_id, procs, notes]], columns = ['patient_id', 'procs', 'notes'])
+    
+    conn = sqlite3.connect(db_path)
+    ppn.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()    
+    
+    #patient glasses section ----------------------------------------------------------------
+    if glasses != 'No Glasses':
+        glasses = pd.DataFrame([[patient_id, glasses]], columns = ['patient_id', 'reading_glasses'])
+        
+        conn = sqlite3.connect(db_path)
+        glasses.to_sql('patient_glasses', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()
+
+    success_text = 'Patient has been submitted to system.'
+
+    return(success_text)
+    
+    
+    
+    # DELETE FROM patient_vitals WHERE patient_id = 1
+    # DELETE FROM patient_lab_results WHERE patient_id = 1
+    # DELETE FROM patient_diag_drug WHERE patient_id = 1
+    # DELETE FROM patient_procs_notes WHERE patient_id = 1
+    # DELETE FROM patient_glasses WHERE patient_id = 1
+
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_vitals WHERE patient_id >= 1""")
+    # conn.commit()
+    # conn.close()
+    
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_lab_results WHERE patient_id >= 1""")
+    # conn.commit()
+    # conn.close()
+    
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_diag_drug WHERE patient_id >= 1""")
+    # conn.commit()
+    # conn.close()  
+    
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_procs_notes WHERE patient_id >= 1""")
+    # conn.commit()
+    # conn.close()      
+    
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_glasses WHERE patient_id >= 1""")
+    # conn.commit()
+    # conn.close()          
+    

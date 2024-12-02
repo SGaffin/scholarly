@@ -331,6 +331,30 @@ cols = list(pd.DataFrame(diag_drug_qry.description)[0])
 diag_drug_test.columns = cols
 #----------------------------------------------------------------------------------------------------------------
 
+#pharmacy_index initialization----------------------------------------------------------------------------------
+pharm_data = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Pharmacy_table.csv')
+pharm_data.columns = ['drug_id','year','ordered', 'distributed']
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+c.execute("""CREATE TABLE pharmacy_record (drug_id, year, ordered, distributed)""")
+conn.commit()
+conn.close()
+
+conn = sqlite3.connect(db_path)
+pharm_data.to_sql('pharmacy_record', conn, if_exists='append', index=False)
+conn.commit()
+conn.close()
+
+##example to view data in drug_index table
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+pharm_qry = c.execute('SELECT * FROM pharmacy_record')
+pharmdata = pd.DataFrame(c.fetchall())
+cols = list(pd.DataFrame(pharm_qry.description)[0])
+pharmdata.columns = cols
+#----------------------------------------------------------------------------------------------------------------
+
 #master join-----------------------------------------------------------------------------------------------------
 
 conn = sqlite3.connect(db_path)
