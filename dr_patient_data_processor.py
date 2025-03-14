@@ -13,7 +13,7 @@ drug = drug.drop_duplicates().reset_index().rename(columns={'index':'id'})
 diagnosis = pd.DataFrame(diag_meds.loc[:,'diagnosis'].drop_duplicates()).reset_index().rename(columns={'index':'id'})
 
 
-db_path = r'./data/dr_patient_data_23.db'
+db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
 
 #patient records------------------------------------------------------------------------------------------------
 
@@ -353,6 +353,11 @@ pharm_qry = c.execute('SELECT * FROM pharmacy_record')
 pharmdata = pd.DataFrame(c.fetchall())
 cols = list(pd.DataFrame(pharm_qry.description)[0])
 pharmdata.columns = cols
+
+# pharm_data_2025 = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/pharmacy_table_2025.csv')
+# pharm_data_2025 = pharm_data_2025.reset_index()
+# pharm_data_2025 = pharm_data_2025.rename(columns = {"index":"drug_id"})
+# pharm_data_2025.loc[:,'ordered'] = pharm_data_2025.loc[:,'ordered'].str.replace(',','').astype(float)
 #----------------------------------------------------------------------------------------------------------------
 
 #master join-----------------------------------------------------------------------------------------------------

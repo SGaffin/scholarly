@@ -81,17 +81,132 @@ def patientrecord_pull():
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    pr_qry = c.execute("""SELECT pv.*, pdd.diag_count, plr.lab_result_count
-                          FROM patient_vitals pv
-                          LEFT JOIN(SELECT patient_id, COUNT(*) AS diag_count FROM patient_diag_drug GROUP BY patient_id) pdd
-                          ON pv.patient_id = pdd.patient_id
-                          LEFT JOIN (SELECT patient_id, COUNT(*) AS lab_result_count FROM patient_lab_results GROUP BY patient_id) plr
-                          ON pv.patient_id = plr.patient_id""")
+    # pr_qry = c.execute("""SELECT pv.*, pdd.diagnosis_id, pdd.drug_id, plr.lab_id, plr.lab_value, pg.reading_glasses
+    #                       FROM patient_vitals pv
+    #                       LEFT JOIN(SELECT patient_id, diagnosis_id, drug_id FROM patient_diag_drug) pdd
+    #                       ON pv.patient_id = pdd.patient_id
+    #                       LEFT JOIN (SELECT patient_id, lab_id, lab_value FROM patient_lab_results) plr
+    #                       ON pv.patient_id = plr.patient_id
+    #                       LEFT JOIN (SELECT patient_id, reading_glasses  FROM patient_glasses GROUP BY patient_id) pg
+    #                       ON pv.patient_id = plr.patient_id
+    #                       ORDER BY CAST(pv.patient_id AS INT)""")
+    
+    pr_qry = c.execute("""SELECT pv.*
+                          FROM patient_vitals pv""")
+                      
     pr_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pr_qry.description)[0])
     pr_data.columns = cols
     
     return(pr_data)
+
+def diagdrug_recordviewer():
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = r'./data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()    
+    dd_qry = c.execute("""SELECT first_name, last_name, diagnosis, drug_name
+                          FROM patient_diag_drug pdd
+                          
+                          LEFT JOIN(SELECT DISTINCT patient_id, first_name, last_name
+                                    FROM patient_vitals) pv
+                          ON CAST(pdd.patient_id AS INT) = CAST(pv.patient_id AS INT)
+
+                        LEFT JOIN(SELECT *
+                                  FROM diagnosis_index) di
+                        ON pdd.diagnosis_id = di.id
+                        LEFT JOIN(SELECT *
+                                  FROM drug_index) dri
+                        ON pdd.drug_id = dri.id
+                        
+                        ORDER BY CAST(pdd.patient_id AS INT), last_name, first_name""")
+                      
+    dd_data = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(dd_qry.description)[0])
+    dd_data.columns = cols
+    
+    return (dd_data)
+
+def pharm_recordviewer(yr):
+    
+    try:
+        yr = str(yr)
+    except:
+        print('yr is already a string')
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = r'./data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor() 
+    
+    pharm_qry = c.execute("""SELECT *
+                             FROM pharmacy_record pr
+                             LEFT JOIN(SELECT *
+                                       FROM drug_index) dri
+                             ON pr.drug_id = dri.id
+                             WHERE year = """ + yr)
+    pharm_data = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(pharm_qry.description)[0])
+    pharm_data.columns = cols
+    
+    pharm_data_ret = pharm_data[['year', 'drug_name', 'dosage', 'ordered', 'distributed']]
+    
+    return(pharm_data_ret)
+
+def pharm_years():
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = r'./data/dr_patient_data_23.db'
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor() 
+    
+    yrs_qry = c.execute("""SELECT DISTINCT year
+                             FROM pharmacy_record
+                             ORDER BY year""")
+    yrs = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(yrs_qry.description)[0])
+    yrs.columns = cols
+    
+    yrs = list(yrs.loc[:,'year'])
+    
+    return(yrs)
+
+def pharm_update_staging(pr_edit):
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    pr_edit = pd.DataFrame(pr_edit)
+    pr_edit.loc[:,'stage_update'] = pd.to_datetime(datetime.datetime.now())
+
+    
+    try:
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor() 
+        pharmstage_qry = c.execute("""SELECT *
+                                      FROM pharmacy_staging""")
+        pharmstage = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pharmstage_qry.description)[0])
+        pharmstage.columns = cols
+        
+        pharmstage.loc[:,'stage_update'] = pd.to_datetime(pharmstage.loc[:,'stage_update'])
+        
+    except:
+        pharmstage = pd.DataFrame()
+    
+    staging_update = pharmstage._append(pr_edit)
+    staging_update = staging_update.sort_values(by = ['stage_update'], ascending = True)
+    staging_update = staging_update.drop_duplicates(keep='first')
+    
+    conn = sqlite3.connect(db_path)
+    staging_update.to_sql('pharmacy_staging', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()
+
 
 def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight):
     
@@ -247,7 +362,7 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    pdd = c.execute('SELECT MAX(patient_id) as last_id FROM patient_vitals')
+    pdd = c.execute('SELECT MAX(CAST(patient_id AS INT)) as last_id FROM patient_vitals')
     pdddata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pdd.description)[0])
     pdddata.columns = cols
@@ -332,31 +447,31 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
 
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_vitals WHERE patient_id >= 1""")
+    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)>= 1""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_lab_results WHERE patient_id >= 1""")
+    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) >= 1""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_diag_drug WHERE patient_id >= 1""")
+    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) >= 1""")
     # conn.commit()
     # conn.close()  
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_procs_notes WHERE patient_id >= 1""")
+    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) >= 1""")
     # conn.commit()
     # conn.close()      
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_glasses WHERE patient_id >= 1""")
+    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) >= 1""")
     # conn.commit()
     # conn.close()          
     

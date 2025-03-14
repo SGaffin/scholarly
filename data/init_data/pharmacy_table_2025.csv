@@ -1,0 +1,37 @@
+﻿drug_name,year,dosage,ordered,per_packet,packet_units,packet_count
+Acetaminophen,2025,"500mg, tabs"," 3,000 ",30,tabs, 100 
+Acetaminophen children's,2025,"80mg, chewables"," 1,000 ",30,tabs, 33 
+Calcium carbonate,2025,"500mg, chewables"," 1,000 ",30,tabs, 33 
+Omeprazole,2025,"20mg, tabs"," 1,000 ",30,tabs, 33 
+Amoxicillin,2025,"250, chewables"," 1,000 ",30,tabs, 33 
+Bacitracin,2025,"1.0gm foil, ointment", 144 ,5,packets, 29 
+Ceftriaxone sodium,2025,"1.0gm, injection", 10 ,10,, 1 
+Doxycycline hyclate,2025,"100mg, tabs"," 1,000 ",20,tabs, 50 
+Sulfamethoxazole (trimethoprin),2025,"800mg, tabs"," 1,000 ",20,tabs, 50 
+Hydrocortisone 1%,2025,"foil, cream", 144 ,5,packets, 29 
+Ibuprofen,2025,"200mg, tabs"," 3,000 ",28,tabs, 107 
+Prednisone,2025,"5mg, tabs", 100 ,20,tabs, 5 
+Loperamide,2025,"2mg, tabs", 100 ,12,tabs, 8 
+Clotrimazole (antifungal) 1%,2025,"20gm, cream", 24 ,1,packet, 24 
+Fluconazole,2025,"150mg, tabs", 100 ,1,tab, 100 
+Cetirizine,2025,"10mg, tabs"," 1,000 ",14,tabs, 71 
+Diphenhydramine,2025,"25mg, capsules"," 1,000 ",30,tabs, 33 
+Metoprolol,2025,"50mg, tabs"," 2,000 ",30,tabs, 67 
+Lisinopril,2025,"10mg, tabs"," 3,000 ",30,tabs, 100 
+Albendazole,2025,"400mg, chewables", 500 ,1,tab, 500 
+Ivermectin (scabies),2025,"6mg, tabs", 100 ,2,tabs, 50 
+Salbutamol,2025,"4mg, tabs", 500 ,30,tabs, 17 
+Guaifenesin,2025,"400mg, tabs", 600 ,40,tabs, 15 
+Hydrochlorothiazide,2025,"25mg, tabs"," 1,000 ",30,tabs, 33 
+Glibenclamide (Glyburide),2025,"5mg, tabs"," 1,000 ",30,tabs, 33 
+Metformin,2025,"500mg, tabs"," 2,000 ",30,tabs, 67 
+Docusate sodium,2025,"100mg, softgels"," 1,000 ",60,tabs, 17 
+Cyclobenzaprine,2025,"10mg, tabs"," 1,000 ",30,tabs, 33 
+Ondanestron,2025,"4mg, tabs", 30 ,15,tabs, 2 
+Promethazine,2025,"25mg, tabs", 300 ,20,tabs, 15 
+Metronidazole,2025,"250mg, tabs"," 1,000 ",14,tabs, 71 
+Silver sulfadiazine 1%,2025,"50gm, cream", 6 ,1,packet, 6 
+Vitamins children (without iron),2025,chewables," 7,500 ",30,tabs, 250 
+Multivitamin (with iron),2025,tabs," 8,000 ",30,tabs, 267 
+Lubricant eye drops,2025,drops, 60 ,5,packets, 12 
+Pregnancy urine cassette test,2025,, 30 ,1,test, 30 

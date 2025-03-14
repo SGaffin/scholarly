@@ -1,11 +1,14 @@
 # DR Patient Med Recorder
 
 library(shiny)
+library(shinyjs)
 library(bslib)
 library(DT)
 library(reticulate)
+library(dplyr)
 
 # use_python("C:/Users/steve/anaconda3/python.exe")
+setwd("C:/Users/jaett/Documents/GitHub/scholarly") 
 use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 
 diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents/GitHub/scholarly/utils")
@@ -13,8 +16,10 @@ diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents
 #make this run every time app is refreshed
 cleartemps <- diagdrug_pull$cleartemps()
 
+#runApp("dr_patient_recorder.R")
+
 ui <- fluidPage(
-  
+  useShinyjs(),
   fluidRow(column(12,uiOutput("titletext"))),
   fluidRow(),
   tabsetPanel(
@@ -64,11 +69,25 @@ ui <- fluidPage(
              
              ),
     tabPanel('Record Viewer',
-             fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('patient_records_tbl')))
+             fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('patient_records_tbl'))),
+             fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('diag_drug_tbl')))
              ),
-    tabPanel('Reference Table',
-             fluidRow(column(12,uiOutput('diag_drug_ref_tbl')))
-    )  
+    tabPanel('Pharmacy - Admin Only',
+             fluidRow(column(12,uiOutput("ws1"))),
+             fluidRow(column(2, style='padding-top:20px;' ,actionButton("edit_exist_pharm_btn", "Edit Existing Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
+             fluidRow(column(2, style='padding-top:20px;' ,actionButton("create_new_pharm_btn", "Create New Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
+             fluidRow(column(2, style='padding-top:20px;' ,hidden(actionButton("save_pharm_changes_btn", "Save Changes", style="background-color: gray; border-color: #2e6da4")))),
+             fluidRow(column(2, style='padding-top:20px;', hidden(uiOutput('pharm_refyr_slt'))),
+                      column(2, style='padding-top:20px;', hidden(uiOutput('pharm_newyr_slt')))),
+             fluidRow(column(12,uiOutput("ws2"))),
+             # fluidRow(column(2, style='padding-top:20px;', uiOutput('pharm_yr_slt'))),
+             # fluidRow(column(10, offset=1, hidden(uiOutput('pharm_ref_tbl'))))#,
+             fluidRow(column(10, offset=1, dataTableOutput('pharm_ref_tbl2')))
+             # fluidRow(column(10, offset=1, hidden(uiOutput('testtable'))))
+             )
+    # tabPanel('Reference Table',
+    #          fluidRow(column(12,uiOutput('diag_drug_ref_tbl')))
+    #         )  
   )
   
 )
@@ -91,6 +110,9 @@ server <- function(input, output, session) {
   output$l5_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
   output$glasses_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Glasses<b></p><br>'))})
   output$l6_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
+  
+  output$ws1 <- renderUI({HTML(paste0('<br><br>'))})
+  output$ws2 <- renderUI({HTML(paste0('<br><br>'))})
   
   # output$patient_vitals_temp <- renderUI({tryCatch(
   #                                           expr = {pvtemp <- diagdrug_pull$patient_vitals_staging(isolate(input$fname_input),isolate(input$lname_input),isolate(input$age_input),
@@ -214,6 +236,16 @@ server <- function(input, output, session) {
                                        pageLength = 100))  
   })
   
+  output$diag_drug_tbl <- renderUI({
+    
+    dd <- diagdrug_pull$diagdrug_recordviewer()
+    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+    
+    DT::renderDataTable(dd, rownames = FALSE,
+                        options = list(autoWidth = TRUE,
+                                       pageLength = 100))  
+  })
+  
   
   output$br_text <- renderUI({HTML(paste('<br>'))})
   output$br_text2 <- renderUI({HTML(paste('<br><br><br><br>'))})
@@ -282,6 +314,103 @@ server <- function(input, output, session) {
                                   
                                 })
   
+  
+
+  
+  output$pharm_ref_tbl2 <- renderDT({
+                  
+                                    tryCatch(                                
+    
+                                    {pr <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
+                                    pr[order(pr$drug_name), ]
+                                    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+                                    
+                                    if(input$pharm_newyr_slt != ''){pr$year <- toString(input$pharm_newyr_slt)}
+                                    
+                                    DT::datatable(pr,
+                                                  rownames = FALSE,
+                                                  editable = TRUE,
+                                                  options = list(autoWidth = TRUE,
+                                                                 pageLength = 100,
+                                                                 dom = 't'))
+                                    },
+                                    #if an error occurs, tell me the error
+                                    error=function(e) {
+                                      message('An Error Occurred')
+                                      # print(' ')#e)
+                                    },
+                                    #if a warning occurs, tell me the warning
+                                    warning=function(w) {
+                                      message('A Warning Occurred')
+                                      print(w)
+                                      return(NA)
+                                    })
+  })
+  
+
+
+  
+  observeEvent(input$pharm_refyr_slt, {shinyjs::show("pharm_ref_tbl2")})
+  observeEvent(input$save_pharm_changes_btn, {shinyjs::show("testtable")})
+  
+
+  
+  observeEvent(input$create_new_pharm_btn, {
+    shinyjs::show("pharm_refyr_slt")
+    shinyjs::show("pharm_newyr_slt")
+    shinyjs::show("save_pharm_changes_btn")
+    shinyjs::hide("edit_exist_pharm_btn")
+    shinyjs::hide("create_new_pharm_btn")
+    
+  })
+
+  
+  output$pharm_refyr_slt <- renderUI({
+    
+    # pharm_yr <- diagdrug_pull$pharm_recordviewer()
+    # pharm_yr <- as.list(unique(pharm_yr$year))
+    
+    pharm_yr <- as.list(diagdrug_pull$pharm_years())
+    
+    
+    selectInput("pharm_refyr_slt", 
+                "Select Pharmacy Reference Year", 
+                choices = c("",pharm_yr))
+    
+  })
+  
+  output$pharm_newyr_slt <- renderUI({
+    
+    
+    selectInput("pharm_newyr_slt", 
+                "Select New Pharmacy Year", 
+                choices = c("","2025","2026","2027", "2028","2029","2030"))
+    
+  })
+
+  observeEvent(input$pharm_ref_tbl2_cell_edit, {
+    
+    
+    print('input$pharm_ref_tbl_cell_edit')
+    pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
+    pr_edit[order(pr_edit$drug_name), ]
+
+    #get values
+    info = input$pharm_ref_tbl2_cell_edit
+    i = as.numeric(info$row)
+    j = as.numeric(info$col) + 1
+    k = toString(info$value)
+
+
+    #write values to reactive
+    pr_edit[i,j] <- k
+    
+    diagdrug_pull$pharm_update_staging(pr_edit)
+    
+    write.csv(pr_edit,'C:/Users/jaett/Documents/DT_test.csv', row.names = FALSE)
+  })
+  
+
   
 }
 
