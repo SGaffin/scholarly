@@ -73,21 +73,18 @@ ui <- fluidPage(
              fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('diag_drug_tbl')))
              ),
     tabPanel('Pharmacy - Admin Only',
-             fluidRow(column(12,uiOutput("ws1"))),
-             fluidRow(column(2, style='padding-top:20px;' ,actionButton("edit_exist_pharm_btn", "Edit Existing Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
-             fluidRow(column(2, style='padding-top:20px;' ,actionButton("create_new_pharm_btn", "Create New Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
+             # fluidRow(column(12,uiOutput("ws1"))),
+             # fluidRow(column(2, style='padding-top:20px;' ,actionButton("edit_exist_pharm_btn", "Edit Existing Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
+             # fluidRow(column(2, style='padding-top:20px;' ,actionButton("create_new_pharm_btn", "Create New Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
              fluidRow(column(2, style='padding-top:20px;' ,hidden(actionButton("save_pharm_changes_btn", "Save Changes", style="background-color: gray; border-color: #2e6da4")))),
-             fluidRow(column(2, style='padding-top:20px;', hidden(uiOutput('pharm_refyr_slt'))),
-                      column(2, style='padding-top:20px;', hidden(uiOutput('pharm_newyr_slt')))),
+             fluidRow(column(2, style='padding-top:20px;', uiOutput('pharm_refyr_slt')),
+                      column(2, style='padding-top:20px;', hidden(uiOutput('pharm_newyr_slt'))),
+                      column(2, style='padding-top:45px;', hidden(actionButton('sub_pharm_btn', 'SUBMIT', style="background-color: #4a90f1; size: 10px; border-color: #2e6da4")))),
              fluidRow(column(12,uiOutput("ws2"))),
-             # fluidRow(column(2, style='padding-top:20px;', uiOutput('pharm_yr_slt'))),
-             # fluidRow(column(10, offset=1, hidden(uiOutput('pharm_ref_tbl'))))#,
-             fluidRow(column(10, offset=1, dataTableOutput('pharm_ref_tbl2')))
-             # fluidRow(column(10, offset=1, hidden(uiOutput('testtable'))))
+             fluidRow(column(10, offset = 1, hidden(uiOutput('pharm_note_txt')))),
+             fluidRow(column(2, offset = 1, hidden(actionButton("create_new_drug_btn", "Add New Drug", style="background-color: green; size: 10px; border-color: #2e6da4")))),
+             fluidRow(column(10, offset = 1, dataTableOutput('pharm_ref_tbl')))
              )
-    # tabPanel('Reference Table',
-    #          fluidRow(column(12,uiOutput('diag_drug_ref_tbl')))
-    #         )  
   )
   
 )
@@ -111,6 +108,7 @@ server <- function(input, output, session) {
   output$glasses_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Glasses<b></p><br>'))})
   output$l6_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
   
+  output$pharm_note_txt <- renderUI({HTML(paste('<p style="font-size: 10px; color: red;"><b>***Pharmacy Tabble is editable.  Double click on any value to edit. You can edit the current year or create a new year based on previous year data.<b></p><br>'))})
   output$ws1 <- renderUI({HTML(paste0('<br><br>'))})
   output$ws2 <- renderUI({HTML(paste0('<br><br>'))})
   
@@ -317,52 +315,75 @@ server <- function(input, output, session) {
   
 
   
-  output$pharm_ref_tbl2 <- renderDT({
+  observeEvent(c(input$pharm_refyr_slt, input$pharm_newyr_slt, input$add_drug_btn),{
+                output$pharm_ref_tbl <- renderDT({
+                                
+                                                  tryCatch(                                
                   
-                                    tryCatch(                                
-    
-                                    {pr <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
-                                    pr[order(pr$drug_name), ]
-                                    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
-                                    
-                                    if(input$pharm_newyr_slt != ''){pr$year <- toString(input$pharm_newyr_slt)}
-                                    
-                                    DT::datatable(pr,
-                                                  rownames = FALSE,
-                                                  editable = TRUE,
-                                                  options = list(autoWidth = TRUE,
-                                                                 pageLength = 100,
-                                                                 dom = 't'))
-                                    },
-                                    #if an error occurs, tell me the error
-                                    error=function(e) {
-                                      message('An Error Occurred')
-                                      # print(' ')#e)
-                                    },
-                                    #if a warning occurs, tell me the warning
-                                    warning=function(w) {
-                                      message('A Warning Occurred')
-                                      print(w)
-                                      return(NA)
-                                    })
+                                                  {pr <- diagdrug_pull$pharm_stage_view()
+                                                   pr[order(pr$drug_name), ]
+                                                  # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+                                                  
+                                                   if(input$pharm_newyr_slt != ''){pr$year <- toString(input$pharm_newyr_slt)
+                                                                                   diagdrug_pull$pharm_update_staging(pr)
+                                                                                   }
+                                                  
+                                                   DT::datatable(pr,
+                                                                 rownames = FALSE,
+                                                                 editable = TRUE,
+                                                                 options = list(autoWidth = TRUE,
+                                                                                pageLength = 100,
+                                                                                dom = 't'))
+                                                  },
+                                                  #if an error occurs, tell me the error
+                                                  error=function(e) {
+                                                    message('An Error Occurred')
+                                                    pr <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
+                                                    pr[order(pr$drug_name), ]
+                                                    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+                                                    
+                                                    if(input$pharm_newyr_slt != ''){pr$year <- toString(input$pharm_newyr_slt)}
+                                                    
+                                                    DT::datatable(pr,
+                                                                  rownames = FALSE,
+                                                                  editable = TRUE,
+                                                                  options = list(autoWidth = TRUE,
+                                                                                 pageLength = 100,
+                                                                                 dom = 't'))
+                                                  },
+                                                  #if a warning occurs, tell me the warning
+                                                  warning=function(w) {
+                                                    message('A Warning Occurred')
+                                                    print(w)
+                                                    return(NA)
+                                                  })
+                })
+  
   })
-  
-
 
   
-  observeEvent(input$pharm_refyr_slt, {shinyjs::show("pharm_ref_tbl2")})
-  observeEvent(input$save_pharm_changes_btn, {shinyjs::show("testtable")})
-  
-
-  
-  observeEvent(input$create_new_pharm_btn, {
-    shinyjs::show("pharm_refyr_slt")
-    shinyjs::show("pharm_newyr_slt")
-    shinyjs::show("save_pharm_changes_btn")
-    shinyjs::hide("edit_exist_pharm_btn")
-    shinyjs::hide("create_new_pharm_btn")
+  observeEvent(input$pharm_newyr_slt, {
+    if(input$pharm_newyr_slt != ''){
+                      pr_edit <- diagdrug_pull$pharm_stage_view()
+                      if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))}
+                      pr_edit$year <- toString(input$pharm_newyr_slt)
+                      diagdrug_pull$pharm_update_staging(pr_edit)}
     
-  })
+    })
+  
+  
+    observeEvent(input$pharm_refyr_slt, {
+    if (toString(input$pharm_refyr_slt) != '') {
+      shinyjs::show("pharm_ref_tbl")
+      shinyjs::show("pharm_newyr_slt")
+      shinyjs::show("create_new_drug_btn")
+      shinyjs::show("pharm_note_txt")
+      shinyjs::show("sub_pharm_btn")
+    }
+    
+    
+    })
+
 
   
   output$pharm_refyr_slt <- renderUI({
@@ -387,30 +408,101 @@ server <- function(input, output, session) {
                 choices = c("","2025","2026","2027", "2028","2029","2030"))
     
   })
+  
 
-  observeEvent(input$pharm_ref_tbl2_cell_edit, {
+  observeEvent(input$pharm_ref_tbl_cell_edit, {
     
+    pr_edit <- diagdrug_pull$pharm_stage_view()
+    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))}
+             
     
-    print('input$pharm_ref_tbl_cell_edit')
-    pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
-    pr_edit[order(pr_edit$drug_name), ]
+    # pr_edit[order(pr_edit$drug_name), ]
 
     #get values
-    info = input$pharm_ref_tbl2_cell_edit
+    info = input$pharm_ref_tbl_cell_edit
     i = as.numeric(info$row)
     j = as.numeric(info$col) + 1
     k = toString(info$value)
 
 
     #write values to reactive
-    pr_edit[i,j] <- k
-    
-    diagdrug_pull$pharm_update_staging(pr_edit)
-    
-    write.csv(pr_edit,'C:/Users/jaett/Documents/DT_test.csv', row.names = FALSE)
+    if (j != 1){
+                  pr_edit[i,j] <- k
+                  pr_edit$year <- toString(input$pharm_newyr_slt)
+                  
+                  diagdrug_pull$pharm_update_staging(pr_edit)
+                  
+                  write.csv(pr_edit,'C:/Users/jaett/Documents/DT_test.csv', row.names = FALSE)
+                  
+                  
+                  
+                  }
+    if (j == 1) {print('drug_id is not an editable column')}
+    print(paste(toString(i), toString(j), k))
   })
   
-
+  output$new_diag_pharm_update <- renderUI({
+    
+    diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
+    diagnosis_choices <- diagnosis_drug_ref$diagnosis
+    
+    
+    selectizeInput("new_diag_pharm_update", 
+                "Select Diagnosis",
+                choices = c(" ", diagnosis_choices),
+                options = list(create = TRUE))
+    
+    
+  })
+  
+  observeEvent(input$create_new_drug_btn, {
+    showModal(modalDialog(
+      title = "Add a New Drug to Pharmacy",
+      fluidRow(column(3, uiOutput("new_diag_pharm_update")),
+               column(3, textInput("new_drug_name","Drug Name", "")),
+               column(2, textInput("new_dosage","Dosage", "")),
+               column(2, textInput("new_ordered","Ordered", "")),
+               column(2, textInput("new_dist","Distributed", "")),),
+      
+      footer = fluidRow(column(1, offset = 7, actionButton('add_drug_btn','Add Drug')),
+                        column(1, style='padding-left:75px;', modalButton("Cancel")))
+    ))
+  })
+  
+  observeEvent(input$add_drug_btn, {
+    
+    #if pharm_stage doesn't exist already then create it
+    pr_edit <- diagdrug_pull$pharm_stage_view()
+    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
+                             diagdrug_pull$pharm_update_staging(pr_edit)}
+    
+    
+    # [['drug_id', 'year', 'drug_name', 'dosage', 'ordered', 'distributed', 'stage_update']]
+    if (toString(input$pharm_newyr_slt) == '') {stageyr <- toString(input$pharm_refyr_slt)} else {stageyr <- toString(input$pharm_newyr_slt)}
+    pharmadd <- data.frame(stageyr, toString(input$new_drug_name), toString(input$new_dosage), toString(input$new_ordered), toString(input$new_dist))
+    names(pharmadd) <- c("year", "drug_name", "dosage","ordered", "distributed")
+    print(pharmadd)
+    diagdrug_pull$add_new_pharm(pharmadd)
+    removeModal()
+    
+  })
+  
+  observeEvent(input$sub_pharm_btn, {
+    
+    if(input$pharm_newyr_slt == ''){yr <- toString(input$pharm_refyr_slt)} 
+    else {yr <- toString(input$pharm_newyr_slt)}
+    
+    res <- diagdrug_pull$pharm_submit(yr)
+    
+    showModal(modalDialog(
+      title = "Message",
+      res,
+      footer = modalButton("Ok")
+    ))
+    
+    print(res)
+    
+  })
   
 }
 

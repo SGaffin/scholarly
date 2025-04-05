@@ -34,6 +34,14 @@ def cleartemps():
     except:
         print('patient_lab_results_temp did not exist')
     
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE pharmacy_staging""")
+        conn.commit()
+        conn.close()
+    except:
+        print('pharmacy_staging did not exist')
     
     r = 'temp tables dropped'
     
@@ -146,13 +154,13 @@ def pharm_recordviewer(yr):
                              FROM pharmacy_record pr
                              LEFT JOIN(SELECT *
                                        FROM drug_index) dri
-                             ON pr.drug_id = dri.id
-                             WHERE year = """ + yr)
+                             ON pr.drug_id = dri.id and CAST(pr.year AS INT) = CAST(dri.year AS INT)
+                             WHERE pr.year = """ + str(yr))
     pharm_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pharm_qry.description)[0])
     pharm_data.columns = cols
     
-    pharm_data_ret = pharm_data[['year', 'drug_name', 'dosage', 'ordered', 'distributed']]
+    pharm_data_ret = pharm_data[['drug_id', 'year', 'drug_name', 'dosage', 'ordered', 'distributed']]
     
     return(pharm_data_ret)
 
@@ -180,8 +188,36 @@ def pharm_update_staging(pr_edit):
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     pr_edit = pd.DataFrame(pr_edit)
-    pr_edit.loc[:,'stage_update'] = pd.to_datetime(datetime.datetime.now())
+    pr_edit.loc[:,'stage_update'] = pd.to_datetime(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')
 
+    
+    # try:
+        
+    #     conn = sqlite3.connect(db_path)
+    #     c = conn.cursor() 
+    #     pharmstage_qry = c.execute("""SELECT *
+    #                                   FROM pharmacy_staging""")
+    #     pharmstage = pd.DataFrame(c.fetchall())
+    #     cols = list(pd.DataFrame(pharmstage_qry.description)[0])
+    #     pharmstage.columns = cols
+        
+    #     pharmstage.loc[:,'stage_update'] = pd.to_datetime(pharmstage.loc[:,'stage_update']).dt.strftime('%Y-%m-%d %H:%M')
+        
+    # except:
+    #     pharmstage = pd.DataFrame(columns = ['drug_id','year','drug_name','dosage','ordered','distributed','stage_update'])
+    
+    # staging_update = pharmstage._append(pr_edit)
+    # staging_update = staging_update.sort_values(by = ['drug_id','stage_update'], ascending=False)
+    # staging_update = staging_update.drop_duplicates(subset = ['drug_id'], keep='first')
+        
+    conn = sqlite3.connect(db_path)
+    pr_edit.to_sql('pharmacy_staging', conn, if_exists='replace', index=False)
+    conn.commit()
+    conn.close()
+    
+def pharm_stage_view():
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         
@@ -193,21 +229,88 @@ def pharm_update_staging(pr_edit):
         cols = list(pd.DataFrame(pharmstage_qry.description)[0])
         pharmstage.columns = cols
         
-        pharmstage.loc[:,'stage_update'] = pd.to_datetime(pharmstage.loc[:,'stage_update'])
-        
-    except:
+        pharmstage = pharmstage.drop(columns = ['stage_update'])
+    except Exception as e:
+        print(e)
         pharmstage = pd.DataFrame()
+        # print('no updates have been made to pharmacy staging table')
+        
+    return(pharmstage)
+
+def add_new_pharm(pharm_add):
     
-    staging_update = pharmstage._append(pr_edit)
-    staging_update = staging_update.sort_values(by = ['stage_update'], ascending = True)
-    staging_update = staging_update.drop_duplicates(keep='first')
-    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     conn = sqlite3.connect(db_path)
-    staging_update.to_sql('pharmacy_staging', conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()
-
-
+    c = conn.cursor() 
+    lastid_qry = c.execute("""SELECT MAX(drug_id) as lastid
+                                  FROM pharmacy_staging""")
+    lastid = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lastid_qry.description)[0])
+    lastid.columns = cols
+    
+    nextid = int(lastid.loc[0,'lastid']) + 1 
+    
+    pharm_add.loc[:,'drug_id'] = nextid
+    pharm_add.loc[:,'stage_update'] = pd.to_datetime(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')
+    pharm_add = pharm_add[['drug_id', 'year', 'drug_name', 'dosage', 'ordered', 'distributed', 'stage_update']]
+    pharm_add.to_sql('pharmacy_staging', conn, if_exists='append', index=False)
+    
+def pharm_submit(yr):
+    
+    pharm = pd.DataFrame(pharm_stage_view())
+    pharm.loc[:,'year'] = str(yr)
+    
+    pharmsub = pharm[['drug_id','year','ordered', 'distributed']].reset_index(drop = True)
+    pharmsub = pharmsub[pharmsub['ordered'] != 0]
+    
+    drug_index = pharm[['year', 'drug_id', 'drug_name', 'dosage']]
+    
+    currentyr = datetime.date.today().year
+    
+    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    
+    yr = int(pharmsub.loc[0,'year'])
+    if yr >= currentyr:
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE
+                          FROM pharmacy_record
+                          WHERE year = '""" + str(yr) + """'""")
+            conn.commit()
+            conn.close()
+            
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE
+                          FROM drug_index
+                          WHERE year = '""" + str(yr) + """'""")
+            conn.commit()
+            conn.close()
+            
+        except:
+            print("error occurred")
+           
+        pharmsub.loc[:,'year'] = pharmsub.loc[:,'year'].astype(str)
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        pharmsub.to_sql('pharmacy_record', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()
+        
+        conn = sqlite3.connect(db_path)
+        drug_index.to_sql('drug_index', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()
+        
+        res = 'Phamacy changes for ' + str(yr) + ' have been SUBMITTED!'
+    else:     
+        res = 'You cannot edit a year in the past. ' + str(yr) + 'is not a current or future year. TRY AGAIN :)'
+    
+    
+    return(res)
+    
 def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight):
     
     db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'

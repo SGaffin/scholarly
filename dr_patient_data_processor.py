@@ -252,7 +252,13 @@ pvdata.columns = cols
 #drug_index initialization---------------------------------------------------------------------------------------
 
 drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Drug_table.csv')
-drug_read.columns = ['id','drug_name','dosage']
+drug_read.loc[:, 'year'] = '2023'
+drug_read = drug_read.rename(columns = {'drug_id':'id', 'Dose_Form':'dosage', 'Drug_name':'drug_name'})
+drug_read = drug_read[['year', 'id','drug_name','dosage']]
+drug_read.loc[:,'drug_name'] = drug_read.loc[:,'drug_name'].str.rstrip() 
+
+
+
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
 # c.execute("""DROP TABLE drug_index""")
@@ -261,9 +267,9 @@ drug_read.columns = ['id','drug_name','dosage']
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# # c.execute("""CREATE TABLE drug_index (id, drug_name, dosage)""")
-# ###c.execute("""DELETE FROM drug_index WHERE drug_name = 'Ibuprofen' """)
-# c.execute("""UPDATE drug_index SET drug_name = 'Ibuprofen' WHERE drug_name = 'Ibuprofen '  """)
+# c.execute("""CREATE TABLE drug_index (year, id, drug_name, dosage)""")
+# # ###c.execute("""DELETE FROM drug_index WHERE drug_name = 'Ibuprofen' """)
+# # c.execute("""UPDATE drug_index SET drug_name = 'Ibuprofen' WHERE drug_name = 'Ibuprofen '  """)
 # conn.commit()
 # conn.close()
 
