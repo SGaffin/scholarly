@@ -32,26 +32,7 @@ def cleartemps(db_path):
         conn.commit()
         conn.close()
     except:
-        print('patient_lab_results_temp did not exist')
-    
-    try:
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("""DROP TABLE pharmacy_staging""")
-        conn.commit()
-        conn.close()
-    except:
-        print('pharmacy_staging did not exist')
-        
-    try:
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        c.execute("""DROP TABLE diag_drug_ref_stage""")
-        conn.commit()
-        conn.close()
-    except:
-        print('diag_drug_ref_stage did not exist')  
-        
+        print('patient_lab_results_temp did not exist')        
     
     r = 'temp tables dropped'
     
@@ -65,16 +46,19 @@ def clear_pharm(db_path):
         c.execute("""DROP TABLE pharmacy_staging""")
         conn.commit()
         conn.close()
+    except:
+        print('pharmacy_staging did not exist') 
         
+    try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("""DROP TABLE diag_drug_ref_stage""")
         conn.commit()
         conn.close()
     except:
-        print('pharmacy_staging did not exist')
+        print('diag_drug_ref_stage did not exist')
     
-    r = 'temp tables dropped'
+    r = 'pharm tables dropped'
     
     return(r)
 
@@ -351,6 +335,7 @@ def pharm_submit(yr, db_path):
         ddr_stage = ddr_stage.rename(columns = {'id':'diag_id'})
     except:
         print('There were no new drugs added to the system')
+        
     #################################################################################################
 
     #################################################################################################
@@ -362,8 +347,36 @@ def pharm_submit(yr, db_path):
     pharmsub = pharmsub[pharmsub['ordered'] != '0']
     pharmsub = pharmsub[pharmsub['ordered'] != 0]
     
+    drug_index = pharm[pharm['ordered'] != '0']
+    drug_index = drug_index[drug_index['ordered'] != 0]
     drug_index = pharm[['year', 'drug_id', 'drug_name', 'dosage']]
     drug_index = drug_index.rename(columns = {'drug_id':'id'})
+    
+    
+    try:
+        rem = pharm[(pharm['ordered'] == '0') | (pharm['ordered'] == 0)].reset_index(drop=True)
+        
+        for i in range(len(rem)):
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE
+                          FROM diagnosis_drug_ref
+                          WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """' and 
+                                CAST(drug_id AS INTEGER) = """ + str(int(rem.loc[i,'drug_id'])))
+            conn.commit()
+            conn.close()
+            
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE
+                          FROM drug_index
+                          WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """' and 
+                                CAST(id AS INTEGER) = """ + str(int(rem.loc[i,'drug_id'])))
+            conn.commit()
+            conn.close()
+        
+    except:
+        print('No drugs were removed from diagnosis_drug_ref')
     
     try:
         ddr_stage = ddr_stage.merge(drug_index[['drug_name', 'id']], how = 'inner', on = ['drug_name'])

@@ -18,6 +18,7 @@ diagdrug_pull <- import_from_path("dr_patient_modules",dir)
 
 #make this run every time app is refreshed
 cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+clear_pharm <- diagdrug_pull$clear_pharm(db_path = dir)
 
 #runApp("dr_patient_recorder.R")
 
