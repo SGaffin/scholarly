@@ -122,7 +122,7 @@ server <- function(input, output, session) {
   observeEvent(input$save_diagdrug_btn, {
 
                                     tryCatch(
-                                      expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
+                                      expr = {pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
                                       pddemp <- pddemp[c("diagnosis","drug")]
 
 
@@ -413,7 +413,9 @@ server <- function(input, output, session) {
     
     selectInput("pharm_newyr_slt", 
                 "Select New Pharmacy Year", 
-                choices = c("","2025","2026","2027", "2028","2029","2030"))
+                choices = c("","2025","2026","2027", "2028","2029","2030"),
+                selected = substr(Sys.Date(), 1, 4)
+                )
     
   })
   

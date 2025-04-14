@@ -355,7 +355,7 @@ def pharm_submit(yr, db_path):
 
     #################################################################################################
 
-    pharm = pd.DataFrame(pharm_stage_view())
+    pharm = pd.DataFrame(pharm_stage_view(db_path))
     pharm.loc[:,'year'] = str(yr)
     
     pharmsub = pharm[['drug_id','year','ordered', 'distributed']].reset_index(drop = True)
@@ -366,7 +366,7 @@ def pharm_submit(yr, db_path):
     drug_index = drug_index.rename(columns = {'drug_id':'id'})
     
     try:
-        ddr_stage = ddr_stage.merge(drug_index[['drug_name', 'id']], how = 'left', on = ['drug_name'])
+        ddr_stage = ddr_stage.merge(drug_index[['drug_name', 'id']], how = 'inner', on = ['drug_name'])
         ddr_stage = ddr_stage[['year', 'diag_id', 'id']]
         ddr_stage = ddr_stage.rename(columns = {'id':'drug_id'})
     except:
@@ -473,7 +473,7 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_return)
 
 
-def diag_drug_staging(diagnosis, drug, db_path):
+def diag_drug_staging(yr, diagnosis, drug, db_path):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
@@ -497,14 +497,20 @@ def diag_drug_staging(diagnosis, drug, db_path):
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    di = c.execute("""SELECT id AS diagnosis_id, diagnosis FROM diagnosis_index WHERE diagnosis = '""" + str(diagnosis) + """'""")
+    di = c.execute("""SELECT id AS diagnosis_id, diagnosis 
+                      FROM diagnosis_index 
+                      WHERE diagnosis = '""" + str(diagnosis) + """' and 
+                            CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
     didata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(di.description)[0])
     didata.columns = cols
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    dri = c.execute("""SELECT id AS drug_id, drug_name FROM drug_index WHERE drug_name = '""" + str(drug) + """'""")
+    dri = c.execute("""SELECT id AS drug_id, drug_name 
+                       FROM drug_index 
+                       WHERE drug_name = '""" + str(drug) + """' and 
+                             CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
     dridata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(dri.description)[0])
     dridata.columns = cols
@@ -526,10 +532,12 @@ def diag_drug_staging(diagnosis, drug, db_path):
     ddtc = c.execute("""SELECT diagnosis, drug_name AS drug
                         FROM patient_diag_drug_temp ddt
                         LEFT JOIN(SELECT *
-                                  FROM diagnosis_index) di
+                                  FROM diagnosis_index
+                                  WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""') di
                         ON ddt.diagnosis_id = di.id
                         LEFT JOIN(SELECT *
-                                  FROM drug_index) dri
+                                  FROM drug_index
+                                  WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""') dri
                         ON ddt.drug_id = dri.id""")
     ddt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(ddtc.description)[0])
