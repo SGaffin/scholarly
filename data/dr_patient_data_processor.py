@@ -13,7 +13,7 @@ drug = drug.drop_duplicates().reset_index().rename(columns={'index':'id'})
 diagnosis = pd.DataFrame(diag_meds.loc[:,'diagnosis'].drop_duplicates()).reset_index().rename(columns={'index':'id'})
 
 
-db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/dr_patient_data_23.db'
 
 #patient records------------------------------------------------------------------------------------------------
 
