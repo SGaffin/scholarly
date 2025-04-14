@@ -3,9 +3,9 @@ import numpy as np
 import sqlite3
 import datetime
 
-def cleartemps():
+def cleartemps(db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         conn = sqlite3.connect(db_path)
@@ -42,14 +42,45 @@ def cleartemps():
         conn.close()
     except:
         print('pharmacy_staging did not exist')
+        
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE diag_drug_ref_stage""")
+        conn.commit()
+        conn.close()
+    except:
+        print('diag_drug_ref_stage did not exist')  
+        
+    
+    r = 'temp tables dropped'
+    
+    return(r)
+
+def clear_pharm(db_path):
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE pharmacy_staging""")
+        conn.commit()
+        conn.close()
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE diag_drug_ref_stage""")
+        conn.commit()
+        conn.close()
+    except:
+        print('pharmacy_staging did not exist')
     
     r = 'temp tables dropped'
     
     return(r)
 
 
-def diagdrug_pull():
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+def diagdrug_pull(yr, db_path):
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     # db_path = r'./data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
@@ -57,9 +88,10 @@ def diagdrug_pull():
     diag_drug_qry = c.execute("""SELECT * 
                                  FROM diagnosis_drug_ref ddr
                                  LEFT JOIN(SELECT * FROM drug_index) drg
-                                 ON ddr.drug_id = drg.id
+                                 ON ddr.drug_id = drg.id and CAST(ddr.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
                                  LEFT JOIN(SELECT * FROM diagnosis_index) diag
-                                 ON ddr.diag_id = diag.id""")
+                                 ON ddr.diag_id = diag.id and CAST(ddr.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                 WHERE CAST(ddr.year AS NVARCHAR) = """ + str(yr) )
     diag_drug_test = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(diag_drug_qry.description)[0])
     diag_drug_test.columns = cols
@@ -67,8 +99,8 @@ def diagdrug_pull():
     return(diag_drug_test)
 
 
-def lab_tests_pull():
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+def lab_tests_pull(db_path):
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -82,9 +114,9 @@ def lab_tests_pull():
     
 
     
-def patientrecord_pull():
+def patientrecord_pull(yr, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     # db_path = r'./data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
@@ -100,17 +132,21 @@ def patientrecord_pull():
     #                       ORDER BY CAST(pv.patient_id AS INT)""")
     
     pr_qry = c.execute("""SELECT pv.*
-                          FROM patient_vitals pv""")
+                          FROM patient_vitals pv
+                          WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
                       
     pr_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pr_qry.description)[0])
     pr_data.columns = cols
     
+    # pr_data.loc[:, 'yr'] = pd.to_datetime(pr_data.loc[:,'datetime']).dt.year
+    # pr_data = pr_data[pr_data['yr'].astype(str)==str(yr)]
+    
     return(pr_data)
 
-def diagdrug_recordviewer():
+def diagdrug_recordviewer(yr, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     # db_path = r'./data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
@@ -118,18 +154,18 @@ def diagdrug_recordviewer():
     dd_qry = c.execute("""SELECT first_name, last_name, diagnosis, drug_name
                           FROM patient_diag_drug pdd
                           
-                          LEFT JOIN(SELECT DISTINCT patient_id, first_name, last_name
+                          LEFT JOIN(SELECT DISTINCT patient_id, first_name, last_name, year
                                     FROM patient_vitals) pv
-                          ON CAST(pdd.patient_id AS INT) = CAST(pv.patient_id AS INT)
+                          ON CAST(pdd.patient_id AS INT) = CAST(pv.patient_id AS INT) and CAST(pdd.year AS NVARCHAR) = CAST(pv.year AS NVARCHAR)
 
-                        LEFT JOIN(SELECT *
-                                  FROM diagnosis_index) di
-                        ON pdd.diagnosis_id = di.id
-                        LEFT JOIN(SELECT *
-                                  FROM drug_index) dri
-                        ON pdd.drug_id = dri.id
-                        
-                        ORDER BY CAST(pdd.patient_id AS INT), last_name, first_name""")
+                          LEFT JOIN(SELECT *
+                                    FROM diagnosis_index) di
+                          ON pdd.diagnosis_id = di.id and CAST(pdd.year AS NVARCHAR) = CAST(di.year AS NVARCHAR)
+                          LEFT JOIN(SELECT *
+                                    FROM drug_index) dri
+                          ON pdd.drug_id = dri.id and CAST(pdd.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
+                          WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """'
+                          ORDER BY CAST(pdd.patient_id AS INT), last_name, first_name""")
                       
     dd_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(dd_qry.description)[0])
@@ -137,25 +173,25 @@ def diagdrug_recordviewer():
     
     return (dd_data)
 
-def pharm_recordviewer(yr):
+def pharm_recordviewer(yr, db_path):
     
     try:
         yr = str(yr)
     except:
         print('yr is already a string')
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     # db_path = r'./data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor() 
     
-    pharm_qry = c.execute("""SELECT *
+    pharm_qry = c.execute("""SELECT drug_id, pr.year, drug_name, dosage, ordered, distributed
                              FROM pharmacy_record pr
                              LEFT JOIN(SELECT *
                                        FROM drug_index) dri
-                             ON pr.drug_id = dri.id and CAST(pr.year AS INT) = CAST(dri.year AS INT)
-                             WHERE pr.year = """ + str(yr))
+                             ON pr.drug_id = dri.id and CAST(pr.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
+                             WHERE CAST(pr.year AS NVARCHAR) = '""" + str(yr) + """'""")
     pharm_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pharm_qry.description)[0])
     pharm_data.columns = cols
@@ -164,9 +200,9 @@ def pharm_recordviewer(yr):
     
     return(pharm_data_ret)
 
-def pharm_years():
+def pharm_years(db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     # db_path = r'./data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
@@ -183,9 +219,9 @@ def pharm_years():
     
     return(yrs)
 
-def pharm_update_staging(pr_edit):
+def pharm_update_staging(pr_edit, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     pr_edit = pd.DataFrame(pr_edit)
     pr_edit.loc[:,'stage_update'] = pd.to_datetime(datetime.datetime.now()).strftime('%Y-%m-%d %H:%M')
@@ -193,13 +229,13 @@ def pharm_update_staging(pr_edit):
     
     # try:
         
-    #     conn = sqlite3.connect(db_path)
-    #     c = conn.cursor() 
-    #     pharmstage_qry = c.execute("""SELECT *
-    #                                   FROM pharmacy_staging""")
-    #     pharmstage = pd.DataFrame(c.fetchall())
-    #     cols = list(pd.DataFrame(pharmstage_qry.description)[0])
-    #     pharmstage.columns = cols
+        # conn = sqlite3.connect(db_path)
+        # c = conn.cursor() 
+        # pharmstage_qry = c.execute("""SELECT *
+        #                               FROM pharmacy_staging""")
+        # pharmstage = pd.DataFrame(c.fetchall())
+        # cols = list(pd.DataFrame(pharmstage_qry.description)[0])
+        # pharmstage.columns = cols
         
     #     pharmstage.loc[:,'stage_update'] = pd.to_datetime(pharmstage.loc[:,'stage_update']).dt.strftime('%Y-%m-%d %H:%M')
         
@@ -215,9 +251,9 @@ def pharm_update_staging(pr_edit):
     conn.commit()
     conn.close()
     
-def pharm_stage_view():
+def pharm_stage_view(db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         
@@ -237,13 +273,35 @@ def pharm_stage_view():
         
     return(pharmstage)
 
-def add_new_pharm(pharm_add):
+def add_new_pharm(yr, pharm_add, diaglist, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    print(str(diaglist))
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    ###################################################################################################
+    #diagnosis to drug handling...could be tricky here
+    
+    #diaglist = list(["Asthma/COPD", "Bacterial Respiratory Infections", "Burn", "TEST", "TEST2"])
+    diaglist = pd.DataFrame(diaglist).T
+    diaglist.columns = ['diagnosis']
+    diaglist = diaglist.reset_index()
+    
+    diaglist.loc[:,'drug_name'] = pharm_add.loc[0,'drug_name']
+    diaglist.loc[:,'year'] = str(yr)
+    diaglist = diaglist[['year', 'diagnosis', 'drug_name']]
+        
+    conn = sqlite3.connect(db_path)
+    diaglist.to_sql('diag_drug_ref_stage', conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()
+    
+    
+    ###################################################################################################
+    
     conn = sqlite3.connect(db_path)
     c = conn.cursor() 
     lastid_qry = c.execute("""SELECT MAX(drug_id) as lastid
-                                  FROM pharmacy_staging""")
+                              FROM pharmacy_staging""")
     lastid = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(lastid_qry.description)[0])
     lastid.columns = cols
@@ -255,20 +313,66 @@ def add_new_pharm(pharm_add):
     pharm_add = pharm_add[['drug_id', 'year', 'drug_name', 'dosage', 'ordered', 'distributed', 'stage_update']]
     pharm_add.to_sql('pharmacy_staging', conn, if_exists='append', index=False)
     
-def pharm_submit(yr):
+def pharm_submit(yr, db_path):
     
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    #################################################################################################
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor() 
+        ddr_stage_qry = c.execute("""SELECT *
+                                      FROM diag_drug_ref_stage""")
+        ddr_stage = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(ddr_stage_qry.description)[0])
+        ddr_stage.columns = cols
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        diag_qry = c.execute("""SELECT * 
+                                FROM diagnosis_index
+                                WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """'""")
+        diagidx = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(diag_qry.description)[0])
+        diagidx.columns = cols
+        
+        nextid = int(diagidx.loc[:,'id'].max()) + 1
+        diaglist = ddr_stage[['diagnosis']].drop_duplicates()
+        
+        diag_ids = diaglist.merge(diagidx[['id', 'diagnosis']], how = 'left', on = 'diagnosis')
+        newdiags = diag_ids[diag_ids['id'].isna()].reset_index(drop=True).reset_index()
+        if len(newdiags) > 0:
+            newdiags.loc[:, 'id'] = newdiags.loc[:, 'index'] + nextid
+            newdiags.loc[:,'year'] = str(yr)
+            newdiags = newdiags[['year', 'id', 'diagnosis']]
+            diagidx = diagidx._append(newdiags)
+        
+        ddr_stage = ddr_stage.merge(diagidx[['diagnosis','id']], how = 'left', on = ['diagnosis'])
+        ddr_stage = ddr_stage.rename(columns = {'id':'diag_id'})
+    except:
+        print('There were no new drugs added to the system')
+    #################################################################################################
+
+    #################################################################################################
+
     pharm = pd.DataFrame(pharm_stage_view())
     pharm.loc[:,'year'] = str(yr)
     
     pharmsub = pharm[['drug_id','year','ordered', 'distributed']].reset_index(drop = True)
+    pharmsub = pharmsub[pharmsub['ordered'] != '0']
     pharmsub = pharmsub[pharmsub['ordered'] != 0]
     
     drug_index = pharm[['year', 'drug_id', 'drug_name', 'dosage']]
+    drug_index = drug_index.rename(columns = {'drug_id':'id'})
+    
+    try:
+        ddr_stage = ddr_stage.merge(drug_index[['drug_name', 'id']], how = 'left', on = ['drug_name'])
+        ddr_stage = ddr_stage[['year', 'diag_id', 'id']]
+        ddr_stage = ddr_stage.rename(columns = {'id':'drug_id'})
+    except:
+        print('No new drugs added')
     
     currentyr = datetime.date.today().year
-    
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
-    
     
     yr = int(pharmsub.loc[0,'year'])
     if yr >= currentyr:
@@ -277,7 +381,7 @@ def pharm_submit(yr):
             c = conn.cursor()
             c.execute("""DELETE
                           FROM pharmacy_record
-                          WHERE year = '""" + str(yr) + """'""")
+                          WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """'""")
             conn.commit()
             conn.close()
             
@@ -285,35 +389,56 @@ def pharm_submit(yr):
             c = conn.cursor()
             c.execute("""DELETE
                           FROM drug_index
-                          WHERE year = '""" + str(yr) + """'""")
+                          WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """'""")
             conn.commit()
             conn.close()
             
+            
+            pharmsub.loc[:,'year'] = pharmsub.loc[:,'year'].astype(str)
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            pharmsub.to_sql('pharmacy_record', conn, if_exists='append', index=False)
+            conn.commit()
+            conn.close()
+            
+            conn = sqlite3.connect(db_path)
+            drug_index.to_sql('drug_index', conn, if_exists='append', index=False)
+            conn.commit()
+            conn.close()
+            
+            if 'ddr_stage' in locals():
+                conn = sqlite3.connect(db_path)
+                c = conn.cursor()
+                c.execute("""DELETE
+                              FROM diagnosis_index
+                              WHERE CAST(year AS NVARCHAR) = '""" + str(yr) + """'""")
+                conn.commit()
+                conn.close()
+                
+                conn = sqlite3.connect(db_path)
+                diagidx.to_sql('diagnosis_index', conn, if_exists='append', index=False)
+                conn.commit()
+                conn.close()
+    
+                conn = sqlite3.connect(db_path)
+                ddr_stage.to_sql('diagnosis_drug_ref', conn, if_exists='append', index=False)
+                conn.commit()
+                conn.close()
+            
+            res = 'Phamacy changes for ' + str(yr) + ' have been SUBMITTED!'
+        
         except:
+            res = 'error occurred on submit'
             print("error occurred")
-           
-        pharmsub.loc[:,'year'] = pharmsub.loc[:,'year'].astype(str)
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        pharmsub.to_sql('pharmacy_record', conn, if_exists='append', index=False)
-        conn.commit()
-        conn.close()
-        
-        conn = sqlite3.connect(db_path)
-        drug_index.to_sql('drug_index', conn, if_exists='append', index=False)
-        conn.commit()
-        conn.close()
-        
-        res = 'Phamacy changes for ' + str(yr) + ' have been SUBMITTED!'
     else:     
         res = 'You cannot edit a year in the past. ' + str(yr) + 'is not a current or future year. TRY AGAIN :)'
     
     
     return(res)
     
-def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight):
+def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         conn = sqlite3.connect(db_path)
@@ -326,12 +451,12 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("""CREATE TABLE patient_vitals_temp (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime)""")
+    c.execute("""CREATE TABLE patient_vitals_temp (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime, year)""")
     conn.commit()
     conn.close()
     
-    pv_temp = pd.DataFrame([[0, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight,datetime.date.today()]],
-                           columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+    pv_temp = pd.DataFrame([[0, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight,datetime.date.today(), datetime.date.today().year]],
+                           columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
 
     conn = sqlite3.connect(db_path)
     pv_temp.to_sql('patient_vitals_temp', conn, if_exists='append', index=False)
@@ -348,9 +473,9 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_return)
 
 
-def diag_drug_staging(diagnosis, drug):
+def diag_drug_staging(diagnosis, drug, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     # try:
     #     conn = sqlite3.connect(db_path)
@@ -414,9 +539,9 @@ def diag_drug_staging(diagnosis, drug):
     
     return(ddt_return)
 
-def lab_results_staging(lab_name, lab_value):
+def lab_results_staging(lab_name, lab_value, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
         
     try:
         conn = sqlite3.connect(db_path)
@@ -459,9 +584,9 @@ def lab_results_staging(lab_name, lab_value):
     return(lrt_return)
 
 
-def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses):
+def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses, db_path):
     
-    db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -474,9 +599,9 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
     
     #patient vitals section-------------------------------------------------------------
     dt = pd.to_datetime('now').strftime("%Y-%m-%d %H:%M:%S")
-    
-    pv = pd.DataFrame([[patient_id, fname, lname, age, sex, hr, bp, rr, o2sat, weight, dt]], 
-                      columns = ['patient_id', 'first_name', 'last_name', 'age', 'sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
+    yr = datetime.date.today().year
+    pv = pd.DataFrame([[patient_id, fname, lname, age, sex, hr, bp, rr, o2sat, weight, dt, yr]], 
+                      columns = ['patient_id', 'first_name', 'last_name', 'age', 'sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
     
 
     conn = sqlite3.connect(db_path)

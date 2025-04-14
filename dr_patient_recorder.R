@@ -7,14 +7,17 @@ library(DT)
 library(reticulate)
 library(dplyr)
 
+
+# setwd("C:/Users/jaett/Documents/GitHub/scholarly")
+
 # use_python("C:/Users/steve/anaconda3/python.exe")
-setwd("C:/Users/jaett/Documents/GitHub/scholarly") 
 use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 
-diagdrug_pull <- import_from_path("dr_patient_modules","C:/Users/jaett/Documents/GitHub/scholarly/utils")
+dir <- paste0(getwd(), '/dr_patient_data_23.db')
+diagdrug_pull <- import_from_path("dr_patient_modules",dir)
 
 #make this run every time app is refreshed
-cleartemps <- diagdrug_pull$cleartemps()
+cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
 
 #runApp("dr_patient_recorder.R")
 
@@ -69,15 +72,17 @@ ui <- fluidPage(
              
              ),
     tabPanel('Record Viewer',
-             fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('patient_records_tbl'))),
-             fluidRow(column(12,style = 'padding-left: 0px;',uiOutput('diag_drug_tbl')))
+             fluidRow(column(10, offset = 1,style = 'padding-left: 0px;',uiOutput('patient_records_tbl'))),
+             fluidRow(column(10, offset = 1,style = 'padding-left: 0px; padding-top: 50px;',uiOutput('diag_drug_tbl')))
              ),
     tabPanel('Pharmacy - Admin Only',
              # fluidRow(column(12,uiOutput("ws1"))),
              # fluidRow(column(2, style='padding-top:20px;' ,actionButton("edit_exist_pharm_btn", "Edit Existing Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
              # fluidRow(column(2, style='padding-top:20px;' ,actionButton("create_new_pharm_btn", "Create New Pharmacy", style="background-color: gray; border-color: #2e6da4"))),
+             fluidRow(column(2, style='padding-top:5px;', passwordInput('psswrd', 'Password')),
+                      column(1, style='padding-top:30px;', actionButton('enter_pass_btn', 'ENTER', style="background-color: #4a90f1; size: 10px; border-color: #2e6da4"))),
              fluidRow(column(2, style='padding-top:20px;' ,hidden(actionButton("save_pharm_changes_btn", "Save Changes", style="background-color: gray; border-color: #2e6da4")))),
-             fluidRow(column(2, style='padding-top:20px;', uiOutput('pharm_refyr_slt')),
+             fluidRow(column(2, style='padding-top:20px;', hidden(uiOutput('pharm_refyr_slt'))),
                       column(2, style='padding-top:20px;', hidden(uiOutput('pharm_newyr_slt'))),
                       column(2, style='padding-top:45px;', hidden(actionButton('sub_pharm_btn', 'SUBMIT', style="background-color: #4a90f1; size: 10px; border-color: #2e6da4")))),
              fluidRow(column(12,uiOutput("ws2"))),
@@ -112,39 +117,12 @@ server <- function(input, output, session) {
   output$ws1 <- renderUI({HTML(paste0('<br><br>'))})
   output$ws2 <- renderUI({HTML(paste0('<br><br>'))})
   
-  # output$patient_vitals_temp <- renderUI({tryCatch(
-  #                                           expr = {pvtemp <- diagdrug_pull$patient_vitals_staging(isolate(input$fname_input),isolate(input$lname_input),isolate(input$age_input),
-  #                                                                                        isolate(input$sex_input),isolate(input$wt_input),isolate(input$hr_input),
-  #                                                                                        isolate(input$bp_input),isolate(input$rr_input),isolate(input$o2s_input))
-  #                                                   print(toString(nrow(pvtemp)))
-  #                                                   pvtemp <- pvtemp[c("first_name","last_name","age","sex", 'heart_rate','blood_pressure','resp_rate','O2_sat','weight')]
-  #                                                   renderDT(pvtemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))},
-  #                                           error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
-  #                                           )
-  #                                         })
-  
-  
-
-  
-
- # output$patient_diag_drug_temp <- renderUI({input$save_diagdrug_btn
- #   
- #                                             tryCatch(
- #                                              expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np))
- #                                                      pddemp <- pddemp[c("diagnosis","drug")]
- # 
- # 
- #                                                      renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))
- #                                                      },
- #                                              error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
- #                                            )
- # 
- #                                              })
+  dir <- paste0(getwd(), '/dr_patient_data_23.db')
   
   observeEvent(input$save_diagdrug_btn, {
 
                                     tryCatch(
-                                      expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np))
+                                      expr = {pddemp <- diagdrug_pull$diag_drug_staging(isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
                                       pddemp <- pddemp[c("diagnosis","drug")]
 
 
@@ -156,21 +134,11 @@ server <- function(input, output, session) {
 
                                   })
   
-  # output$patient_lab_res_temp <- renderUI({input$add_lab_btn
-  #   
-    # tryCatch(
-    #   expr = {plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val))
-    #           plrtemp <- plrtemp[c("lab_name","lab_value")]
-    #           renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't'))
-    #           },
-    #   error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
-    #   )
-  #   
-  # })
+
   
   observeEvent(input$add_lab_btn, {
                                     tryCatch(
-                                      expr = {plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val))
+                                      expr = {plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir)
                                       plrtemp <- plrtemp[c("lab_name","lab_value")]
                                       output$patient_lab_res_temp <- renderUI(renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
                                       },
@@ -182,7 +150,7 @@ server <- function(input, output, session) {
   observeEvent(input$submit_btn, {
                                   diagdrug_pull$final_submit(isolate(input$fname_input), isolate(input$lname_input), isolate(input$age_input), isolate(input$sex_input), 
                                                              isolate(input$wt_input), isolate(input$hr_input), isolate(input$bp_input), isolate(input$rr_input), isolate(input$o2s_input),
-                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses))
+                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses), db_path = dir)
     
                                   updateTextInput(session, "fname_input", value = "")
                                   updateTextInput(session, "lname_input", value = "")
@@ -194,12 +162,12 @@ server <- function(input, output, session) {
                                   updateTextInput(session, "rr_input", value = "")
                                   updateTextInput(session, "o2s_input", value = "")
                                   
-                                  lab_test_ref <- diagdrug_pull$lab_tests_pull()
+                                  lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
                                   lab_names <- unique(lab_test_ref$lab_name)
                                   updateSelectInput(session, "slt_lab_name", label = "Select Lab Test", choices = c("No Labs",lab_names))
                                   
                                   
-                                  diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
+                                  diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
                                   diagnosis_choices <- diagnosis_drug_ref$diagnosis
                                   updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c(" ", diagnosis_choices))
                                   
@@ -209,14 +177,14 @@ server <- function(input, output, session) {
                                   
                                   updateSelectInput(session, "slt_glasses", label = "Select Glassess", choices = c("No Glasses","1.00","1.25","1.5","1.75","2.00","2.25","2.5","2.75","3.00","3.25","3.5","3.75","4.00"))
                                   
-                                  cleartemps <- diagdrug_pull$cleartemps()
+                                  cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
     
   })
   
   
 
   output$diag_drug_ref_tbl <- renderUI({
-      ddr <- diagdrug_pull$diagdrug_pull()
+      ddr <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
       ddr <- ddr[c("diagnosis","drug_name","dosage","distribution")]
     
       DT::renderDataTable(ddr, rownames = FALSE,
@@ -226,7 +194,7 @@ server <- function(input, output, session) {
 
   
   output$patient_records_tbl <- renderUI({
-    pr <- diagdrug_pull$patientrecord_pull()
+    pr <- diagdrug_pull$patientrecord_pull(substr(Sys.Date(), 1, 4), db_path = dir)
     # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
     
     DT::renderDataTable(pr, rownames = FALSE,
@@ -236,7 +204,7 @@ server <- function(input, output, session) {
   
   output$diag_drug_tbl <- renderUI({
     
-    dd <- diagdrug_pull$diagdrug_recordviewer()
+    dd <- diagdrug_pull$diagdrug_recordviewer(substr(Sys.Date(), 1, 4), db_path = dir)
     # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
     
     DT::renderDataTable(dd, rownames = FALSE,
@@ -258,7 +226,7 @@ server <- function(input, output, session) {
   
     output$slt_diag_np <- renderUI({
     
-                                    diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
+                                    diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
                                     diagnosis_choices <- diagnosis_drug_ref$diagnosis
                                     
                                     
@@ -270,7 +238,7 @@ server <- function(input, output, session) {
   
   output$slt_drug_np <- renderUI({
     
-                                  diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
+                                  diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
                                   meds <- rbind(diagnosis_drug_ref$drug_name[diagnosis_drug_ref$diagnosis==input$slt_diag_np])
                                   
                                   selectInput("slt_drug_np", 
@@ -281,7 +249,7 @@ server <- function(input, output, session) {
   
   output$slt_lab_name <- renderUI({
     
-                                    lab_test_ref <- diagdrug_pull$lab_tests_pull()
+                                    lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
                                     lab_names <- unique(lab_test_ref$lab_name)
                                     
                                     
@@ -294,7 +262,7 @@ server <- function(input, output, session) {
   
   output$slt_lab_val <- renderUI({
     
-                                  lab_test_ref <- diagdrug_pull$lab_tests_pull()
+                                  lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
                                   lab_vals <- rbind(lab_test_ref$lab_value[lab_test_ref$lab_name==input$slt_lab_name])
                                   
                                   
@@ -315,18 +283,17 @@ server <- function(input, output, session) {
   
 
   
-  observeEvent(c(input$pharm_refyr_slt, input$pharm_newyr_slt, input$add_drug_btn),{
+  observeEvent(c(input$pharm_refyr_slt, input$pharm_newyr_slt, input$add_drug_btn, input$sub_pharm_btn),{
                 output$pharm_ref_tbl <- renderDT({
                                 
                                                   tryCatch(                                
                   
-                                                  {pr <- diagdrug_pull$pharm_stage_view()
+                                                  {pr <- diagdrug_pull$pharm_stage_view(db_path = dir)
                                                    pr[order(pr$drug_name), ]
-                                                  # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
                                                   
                                                    if(input$pharm_newyr_slt != ''){pr$year <- toString(input$pharm_newyr_slt)
-                                                                                   diagdrug_pull$pharm_update_staging(pr)
-                                                                                   }
+                                                                                   diagdrug_pull$pharm_update_staging(pr, db_path = dir)
+                                                                                   
                                                   
                                                    DT::datatable(pr,
                                                                  rownames = FALSE,
@@ -334,11 +301,33 @@ server <- function(input, output, session) {
                                                                  options = list(autoWidth = TRUE,
                                                                                 pageLength = 100,
                                                                                 dom = 't'))
+                                                   } else {
+                                                     
+                                                     pr <- diagdrug_pull$pharm_recordviewer(yr, db_path = dir)
+                                                     pr[order(pr$drug_name), ]
+                                                    
+                                                     DT::datatable(pr,
+                                                                   rownames = FALSE,
+                                                                   editable = TRUE,
+                                                                   options = list(autoWidth = TRUE,
+                                                                                  pageLength = 100,
+                                                                                  dom = 't')) 
+                                                   }
                                                   },
                                                   #if an error occurs, tell me the error
                                                   error=function(e) {
-                                                    message('An Error Occurred')
-                                                    pr <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
+                                                    message('An Error Occurred in pharm admin tab...')
+                                                    
+                                                    if ((toString(input$pharm_newyr_slt) == '') & (toString(input$pharm_refyr_slt) == '')){
+                                                      
+                                                      print("No selections made in pharmacy admin tab yet...")
+                                                      
+                                                    } else {
+                                                    
+                                                    if(toString(input$pharm_newyr_slt) == '') {yr <- toString(input$pharm_refyr_slt)
+                                                    } else {yr <- toString(input$pharm_newyr_slt)}
+                                                    
+                                                    pr <- diagdrug_pull$pharm_recordviewer(yr, db_path = dir)
                                                     pr[order(pr$drug_name), ]
                                                     # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
                                                     
@@ -350,6 +339,7 @@ server <- function(input, output, session) {
                                                                   options = list(autoWidth = TRUE,
                                                                                  pageLength = 100,
                                                                                  dom = 't'))
+                                                    }
                                                   },
                                                   #if a warning occurs, tell me the warning
                                                   warning=function(w) {
@@ -364,10 +354,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$pharm_newyr_slt, {
     if(input$pharm_newyr_slt != ''){
-                      pr_edit <- diagdrug_pull$pharm_stage_view()
-                      if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))}
+                      pr_edit <- diagdrug_pull$pharm_stage_view(db_path = dir)
+                      if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt), db_path = dir)}
                       pr_edit$year <- toString(input$pharm_newyr_slt)
-                      diagdrug_pull$pharm_update_staging(pr_edit)}
+                      diagdrug_pull$pharm_update_staging(pr_edit, db_path = dir)}
     
     })
   
@@ -383,20 +373,38 @@ server <- function(input, output, session) {
     
     
     })
+    
+    observeEvent(input$enter_pass_btn,{
+      
+      if (toString(input$psswrd) == 'blevins'){
+        shinyjs::hide("psswrd")
+        shinyjs::hide("enter_pass_btn")
+        shinyjs::show("pharm_refyr_slt")
+      } else {
+        
+        showModal(modalDialog(
+          title = "Password Incorrect!",
+          paste0("Password is incorrect.  Try Again! "),
+          
+          footer = fluidRow(column(1, style='padding-left:75px;', modalButton("OK")))
+        ))
+      }
+    })
 
-
+  
   
   output$pharm_refyr_slt <- renderUI({
     
     # pharm_yr <- diagdrug_pull$pharm_recordviewer()
     # pharm_yr <- as.list(unique(pharm_yr$year))
     
-    pharm_yr <- as.list(diagdrug_pull$pharm_years())
+    pharm_yr <- as.list(diagdrug_pull$pharm_years(db_path = dir))
     
     
     selectInput("pharm_refyr_slt", 
                 "Select Pharmacy Reference Year", 
-                choices = c("",pharm_yr))
+                choices = c("",pharm_yr), 
+                selected = substr(Sys.Date(), 1, 4))
     
   })
   
@@ -412,8 +420,8 @@ server <- function(input, output, session) {
 
   observeEvent(input$pharm_ref_tbl_cell_edit, {
     
-    pr_edit <- diagdrug_pull$pharm_stage_view()
-    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))}
+    pr_edit <- diagdrug_pull$pharm_stage_view(db_path = dir)
+    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt), db_path = dir)}
              
     
     # pr_edit[order(pr_edit$drug_name), ]
@@ -430,9 +438,9 @@ server <- function(input, output, session) {
                   pr_edit[i,j] <- k
                   pr_edit$year <- toString(input$pharm_newyr_slt)
                   
-                  diagdrug_pull$pharm_update_staging(pr_edit)
+                  diagdrug_pull$pharm_update_staging(pr_edit, db_path = dir)
                   
-                  write.csv(pr_edit,'C:/Users/jaett/Documents/DT_test.csv', row.names = FALSE)
+                  # write.csv(pr_edit,'C:/Users/jaett/Documents/DT_test.csv', row.names = FALSE)
                   
                   
                   
@@ -443,13 +451,14 @@ server <- function(input, output, session) {
   
   output$new_diag_pharm_update <- renderUI({
     
-    diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull()
+    diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
     diagnosis_choices <- diagnosis_drug_ref$diagnosis
     
     
     selectizeInput("new_diag_pharm_update", 
                 "Select Diagnosis",
                 choices = c(" ", diagnosis_choices),
+                multiple=TRUE,
                 options = list(create = TRUE))
     
     
@@ -472,9 +481,9 @@ server <- function(input, output, session) {
   observeEvent(input$add_drug_btn, {
     
     #if pharm_stage doesn't exist already then create it
-    pr_edit <- diagdrug_pull$pharm_stage_view()
-    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt))
-                             diagdrug_pull$pharm_update_staging(pr_edit)}
+    pr_edit <- diagdrug_pull$pharm_stage_view(db_path = dir)
+    if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt), db_path = dir)
+                             diagdrug_pull$pharm_update_staging(pr_edit, db_path = dir)}
     
     
     # [['drug_id', 'year', 'drug_name', 'dosage', 'ordered', 'distributed', 'stage_update']]
@@ -482,7 +491,8 @@ server <- function(input, output, session) {
     pharmadd <- data.frame(stageyr, toString(input$new_drug_name), toString(input$new_dosage), toString(input$new_ordered), toString(input$new_dist))
     names(pharmadd) <- c("year", "drug_name", "dosage","ordered", "distributed")
     print(pharmadd)
-    diagdrug_pull$add_new_pharm(pharmadd)
+    diagdrug_pull$add_new_pharm(stageyr, pharmadd,list(input$new_diag_pharm_update), db_path = dir)
+    
     removeModal()
     
   })
@@ -492,7 +502,8 @@ server <- function(input, output, session) {
     if(input$pharm_newyr_slt == ''){yr <- toString(input$pharm_refyr_slt)} 
     else {yr <- toString(input$pharm_newyr_slt)}
     
-    res <- diagdrug_pull$pharm_submit(yr)
+    res <- diagdrug_pull$pharm_submit(yr, db_path = dir)
+    diagdrug_pull$clear_pharm(db_path = dir)
     
     showModal(modalDialog(
       title = "Message",
@@ -506,6 +517,7 @@ server <- function(input, output, session) {
   
 }
 
+options(warn = -1)
 options(shiny.host = '0.0.0.0')
 options(shiny.port = 1111)
 shinyApp(ui, server)

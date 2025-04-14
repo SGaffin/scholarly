@@ -24,15 +24,15 @@ db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
 #------------------------
 
 
-# vitals = pd.DataFrame(columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime'])
-# dummyentry = pd.DataFrame([['0','jane','doe','25','F','68','120/80','16', '98', '125', pd.to_datetime('1/30/1986')]])
+# vitals = pd.DataFrame(columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
+# dummyentry = pd.DataFrame([['0','jane','doe','25','F','68','120/80','16', '98', '125', pd.to_datetime('1/30/2023'), 2023]])
 # dummyentry.columns = vitals.columns
 # vitals = vitals._append(dummyentry)
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
 # # c.execute("""DROP TABLE patient_vitals """)
-# c.execute("""CREATE TABLE patient_vitals (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime)""")
+# c.execute("""CREATE TABLE patient_vitals (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime, year)""")
 # conn.commit()
 # conn.close()
 
@@ -47,6 +47,8 @@ pdd = c.execute('SELECT * FROM patient_vitals')
 pdddata = pd.DataFrame(c.fetchall())
 cols = list(pd.DataFrame(pdd.description)[0])
 pdddata.columns = cols
+
+
 #------------------------
 
 
@@ -60,10 +62,10 @@ tbls.columns = cols
 #---------------------------------------------------------------
 
 #------------------------
-dummyentry = pd.DataFrame([[0,17,27]], columns = ['patient_id','diagnosis_id', 'drug_id'])
+dummyentry = pd.DataFrame([[2023, 0, 17, 27]], columns = ['year', 'patient_id','diagnosis_id', 'drug_id'])
 conn = sqlite3.connect(db_path)
 c = conn.cursor()
-c.execute("""CREATE TABLE patient_diag_drug (patient_id, diagnosis_id, drug_id)""")
+c.execute("""CREATE TABLE patient_diag_drug (year, patient_id, diagnosis_id, drug_id)""")
 # c.execute("""DROP TABLE patient_diag_drug""")
 conn.commit()
 conn.close()
@@ -216,18 +218,18 @@ gldata.columns = cols
 #------------------------
 
 #------------------------
-dummyentry = pd.DataFrame([[0, 'test procs', 'test notes']],columns=['patient_id', 'procs', 'notes'])
+# dummyentry = pd.DataFrame([[0, 'test procs', 'test notes']],columns=['patient_id', 'procs', 'notes'])
 
-conn = sqlite3.connect(db_path)
-c = conn.cursor()
-c.execute("""CREATE TABLE patient_procs_notes (patient_id, procs, notes)""")
-conn.commit()
-conn.close()
+# conn = sqlite3.connect(db_path)
+# c = conn.cursor()
+# c.execute("""CREATE TABLE patient_procs_notes (patient_id, procs, notes)""")
+# conn.commit()
+# conn.close()
 
-conn = sqlite3.connect(db_path)
-dummyentry.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
-conn.commit()
-conn.close()
+# conn = sqlite3.connect(db_path)
+# dummyentry.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
+# conn.commit()
+# conn.close()
 
 conn = sqlite3.connect(db_path)
 c = conn.cursor()
@@ -251,11 +253,11 @@ pvdata.columns = cols
 
 #drug_index initialization---------------------------------------------------------------------------------------
 
-drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Drug_table.csv')
-drug_read.loc[:, 'year'] = '2023'
-drug_read = drug_read.rename(columns = {'drug_id':'id', 'Dose_Form':'dosage', 'Drug_name':'drug_name'})
-drug_read = drug_read[['year', 'id','drug_name','dosage']]
-drug_read.loc[:,'drug_name'] = drug_read.loc[:,'drug_name'].str.rstrip() 
+# drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Drug_table.csv')
+# drug_read.loc[:, 'year'] = '2023'
+# drug_read = drug_read.rename(columns = {'drug_id':'id', 'Dose_Form':'dosage', 'Drug_name':'drug_name'})
+# drug_read = drug_read[['year', 'id','drug_name','dosage']]
+# drug_read.loc[:,'drug_name'] = drug_read.loc[:,'drug_name'].str.rstrip() 
 
 
 
@@ -273,10 +275,10 @@ drug_read.loc[:,'drug_name'] = drug_read.loc[:,'drug_name'].str.rstrip()
 # conn.commit()
 # conn.close()
 
-# conn = sqlite3.connect(db_path)
-# drug_read.to_sql('drug_index', conn, if_exists='append', index=False)
-# conn.commit()
-# conn.close()
+conn = sqlite3.connect(db_path)
+drug_read.to_sql('drug_index', conn, if_exists='append', index=False)
+conn.commit()
+conn.close()
 
 ##example to view data in drug_index table
 conn = sqlite3.connect(db_path)
@@ -288,18 +290,21 @@ drugtest.columns = cols
 #----------------------------------------------------------------------------------------------------------------
 
 
-#diagnosis_index initialization----------------------------------------------------------------------------------
-diag_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diagnosis_id_table.csv')
-diag_read.columns = ['id','diagnosis']
+# #diagnosis_index initialization----------------------------------------------------------------------------------
+# diag_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diagnosis_id_table.csv')
+# diag_read.loc[:,'year'] = 2023
+# diag_read.columns = ['id','diagnosis','year']
+# diag_read = diag_read[['year', 'id', 'diagnosis']]
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE diagnosis_index (id, diagnosis)""")
+# c.execute("""CREATE TABLE diagnosis_index (year, id, diagnosis)""")
+# # c.execute("""DROP TABLE diagnosis_index""")
 # conn.commit()
 # conn.close()
 
 # conn = sqlite3.connect(db_path)
-# diag_read.to_sql('diagnosis_index', conn, if_exists='append', index=False)
+# diagtest.to_sql('diagnosis_index', conn, if_exists='append', index=False)
 # conn.commit()
 # conn.close()
 
@@ -314,12 +319,14 @@ diagtest.columns = cols
 
 
 #diagnosis_drug_ref initialization-------------------------------------------------------------------------------
-diag_drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diag_drug_table.csv')
-diag_drug_read.columns = ['diag_id','drug_id']
+# diag_drug_read = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/diag_drug_table.csv')
+# diag_drug_read.loc[:,'year'] = 2023
+# diag_drug_read.columns = ['diag_id','drug_id', 'year']
+# diag_drug_read = diag_drug_read[['year', 'diag_id','drug_id']]
 
 # conn = sqlite3.connect(db_path)
 # c = conn.cursor()
-# c.execute("""CREATE TABLE diagnosis_drug_ref (diag_id, drug_id)""")
+# c.execute("""CREATE TABLE diagnosis_drug_ref (year, diag_id, drug_id)""")
 # # c.execute("""DROP TABLE diagnosis_drug_ref""")
 # conn.commit()
 # conn.close()
@@ -338,19 +345,19 @@ diag_drug_test.columns = cols
 #----------------------------------------------------------------------------------------------------------------
 
 #pharmacy_index initialization----------------------------------------------------------------------------------
-pharm_data = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Pharmacy_table.csv')
-pharm_data.columns = ['drug_id','year','ordered', 'distributed']
+# pharm_data = pd.read_csv('C:/Users/jaett/Documents/GitHub/scholarly/data/init_data/Pharmacy_table.csv')
+# pharm_data.columns = ['drug_id','year','ordered', 'distributed']
 
-conn = sqlite3.connect(db_path)
-c = conn.cursor()
-c.execute("""CREATE TABLE pharmacy_record (drug_id, year, ordered, distributed)""")
-conn.commit()
-conn.close()
+# conn = sqlite3.connect(db_path)
+# c = conn.cursor()
+# c.execute("""CREATE TABLE pharmacy_record (drug_id, year, ordered, distributed)""")
+# conn.commit()
+# conn.close()
 
-conn = sqlite3.connect(db_path)
-pharm_data.to_sql('pharmacy_record', conn, if_exists='append', index=False)
-conn.commit()
-conn.close()
+# conn = sqlite3.connect(db_path)
+# pharm_data.to_sql('pharmacy_record', conn, if_exists='append', index=False)
+# conn.commit()
+# conn.close()
 
 ##example to view data in drug_index table
 conn = sqlite3.connect(db_path)
@@ -368,15 +375,15 @@ pharmdata.columns = cols
 
 #master join-----------------------------------------------------------------------------------------------------
 
-conn = sqlite3.connect(db_path)
-c = conn.cursor()
-diag_drug_qry = c.execute("""SELECT * 
-                             FROM diagnosis_drug_ref ddr
-                             LEFT JOIN(SELECT * FROM drug_index) drg
-                             ON ddr.drug_id = drg.id""")
-diag_drug_test = pd.DataFrame(c.fetchall())
-cols = list(pd.DataFrame(diag_drug_qry.description)[0])
-diag_drug_test.columns = cols
+# conn = sqlite3.connect(db_path)
+# c = conn.cursor()
+# diag_drug_qry = c.execute("""SELECT * 
+#                              FROM diagnosis_drug_ref ddr
+#                              LEFT JOIN(SELECT * FROM drug_index) drg
+#                              ON ddr.drug_id = drg.id""")
+# diag_drug_test = pd.DataFrame(c.fetchall())
+# cols = list(pd.DataFrame(diag_drug_qry.description)[0])
+# diag_drug_test.columns = cols
 
 
 def diagdrug_pull():
