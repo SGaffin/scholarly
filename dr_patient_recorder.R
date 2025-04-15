@@ -6,15 +6,16 @@ library(bslib)
 library(DT)
 library(reticulate)
 library(dplyr)
+library(RSQLite)
 
 
 # setwd("C:/Users/jaett/Documents/GitHub/scholarly")
 
 # use_python("C:/Users/steve/anaconda3/python.exe")
-use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 
+use_python("C:\\Users\\jaett\\anaconda3\\python.exe")
 dir <- paste0(getwd(), '/dr_patient_data_23.db')
-diagdrug_pull <- import_from_path("dr_patient_modules",dir)
+diagdrug_pull <- import_from_path("dr_patient_modules",getwd())
 
 #make this run every time app is refreshed
 cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
@@ -34,6 +35,7 @@ ui <- fluidPage(
         #    ),
     tabPanel('New Patient',
              fluidRow(column(3,uiOutput('br_text'))),
+             fluidRow(column(1, actionButton("refresh_vitals_btn", "REFRESH", style="background-color: #0f6ff3; border-color: #2e6da4; font-weight: bold;"))),
              fluidRow(column(12,uiOutput("l1_txt"))),
              fluidRow(column(12,uiOutput("vitals_txt"))),
              fluidRow(column(2, textInput("fname_input","First Name", "")), column(2, style='padding-left:0px;',textInput("lname_input","Last Name", ""))), 
@@ -50,14 +52,14 @@ ui <- fluidPage(
              fluidRow(column(12,uiOutput("labres_txt1"))),
              fluidRow(column(3,uiOutput('slt_lab_name')), column(2, style='padding-left:0px;',uiOutput('slt_lab_val'))),
              fluidRow(column(2, style='padding-top:20px;' ,actionButton("add_lab_btn", "Add Lab", style="background-color: gray; border-color: #2e6da4"))),
-             fluidRow(column(12, uiOutput('patient_lab_res_temp'))),
+             fluidRow(column(12, hidden(uiOutput('patient_lab_res_temp')))),
              fluidRow(column(12,uiOutput("l3_txt"))),
              fluidRow(column(12,uiOutput("diagdrug_txt1"))),
              fluidRow(column(12,uiOutput("diagdrug_txt2"))),
              
              fluidRow(column(2,uiOutput('slt_diag_np')), column(2, style='padding-left:0px;',uiOutput('slt_drug_np'))),
              fluidRow(column(2, style='padding-top:20px;' ,actionButton("save_diagdrug_btn", "Add Diagnosis", style="background-color: gray; border-color: #2e6da4"))),
-             fluidRow(column(12,uiOutput('patient_diag_drug_temp'))),
+             fluidRow(column(12,hidden(uiOutput('patient_diag_drug_temp')))),
              fluidRow(column(12,uiOutput("l4_txt"))),
              fluidRow(column(12,uiOutput("proc_note_txt"))),
              fluidRow(style = 'padding-left: 15px; padding-right: 15px;', textAreaInput("proc_txt","Procedures", "",'100%' ,'100px')),
@@ -120,14 +122,53 @@ server <- function(input, output, session) {
   
   dir <- paste0(getwd(), '/dr_patient_data_23.db')
   
+  observeEvent(input$refresh_vitals_btn, {
+    
+                                          cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+                                          
+                                          updateTextInput(session, "fname_input", value = "")
+                                          updateTextInput(session, "lname_input", value = "")
+                                          updateTextInput(session, "age_input", value = "")
+                                          updateTextInput(session, "sex_input", value = "")
+                                          updateTextInput(session, "wt_input", value = "")
+                                          updateTextInput(session, "hr_input", value = "")
+                                          updateTextInput(session, "bp_input", value = "")
+                                          updateTextInput(session, "rr_input", value = "")
+                                          updateTextInput(session, "o2s_input", value = "")
+                                          
+                                          lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
+                                          lab_names <- unique(lab_test_ref$lab_name)
+                                          updateSelectInput(session, "slt_lab_name", label = "Select Lab Test", choices = c("No Labs",lab_names))
+                                          
+                                          diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
+                                          diagnosis_choices <- diagnosis_drug_ref$diagnosis
+                                          updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c(" ", diagnosis_choices))
+                                          
+                                          
+                                          updateTextAreaInput(session, "proc_txt", value = "")
+                                          updateTextAreaInput(session, "notes_txt", value = "")
+                                          
+                                          updateSelectInput(session, "slt_glasses", label = "Select Glassess", choices = c("No Glasses","1.00","1.25","1.5","1.75","2.00","2.25","2.5","2.75","3.00","3.25","3.5","3.75","4.00"))
+                                          
+                                          shinyjs::hide("patient_diag_drug_temp")
+                                          shinyjs::hide("patient_lab_res_temp")
+                                          
+                                          })
+  
   observeEvent(input$save_diagdrug_btn, {
 
                                     tryCatch(
-                                      expr = {pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
+                                      
+                                      expr = {
+                                        
+                                      pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
                                       pddemp <- pddemp[c("diagnosis","drug")]
 
 
                                       output$patient_diag_drug_temp <- renderUI(renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+                                      
+                                      shinyjs::show("patient_diag_drug_temp")
+                                      
                                       },
                                       error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
                                     )
@@ -139,9 +180,14 @@ server <- function(input, output, session) {
   
   observeEvent(input$add_lab_btn, {
                                     tryCatch(
-                                      expr = {plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir)
-                                      plrtemp <- plrtemp[c("lab_name","lab_value")]
-                                      output$patient_lab_res_temp <- renderUI(renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+                                       
+                                      expr = {
+                                                  plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir)
+                                                  plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                      
+                                                  output$patient_lab_res_temp <- renderUI(renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+                                                  
+                                                  shinyjs::show("patient_lab_res_temp")
                                       },
                                       error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
                                     )
