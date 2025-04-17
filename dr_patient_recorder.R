@@ -18,21 +18,29 @@ dir <- paste0(getwd(), '/dr_patient_data_23.db')
 diagdrug_pull <- import_from_path("dr_patient_modules",getwd())
 
 #make this run every time app is refreshed
-cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+# cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
 clear_pharm <- diagdrug_pull$clear_pharm(db_path = dir)
 
 #runApp("dr_patient_recorder.R")
 
 ui <- fluidPage(
   useShinyjs(),
-  fluidRow(column(12,uiOutput("titletext"))),
+  
+  conditionalPanel(condition = "input.enter_user_btn == 1 && input.userid.length > 0",
+                   fluidRow(column(12,style='padding-top: 5px; margin-bottom:-50px;', uiOutput("currentuser_txt")))),
+  
+  fluidRow(column(12, uiOutput("titletext"))),
   fluidRow(),
+  
+  conditionalPanel(condition = "input.enter_user_btn == 0",
+                   fluidRow(column(12, uiOutput('userid_txt'))),
+                   fluidRow(column(2, style='padding-top:5px;', textInput('userid', 'UserId')),
+                            column(1, style='padding-top:30px;', actionButton('enter_user_btn', 'ENTER', style="background-color: #0f6ff3; size: 10px; border-color: #2e6da4; font-weight: bold;"))),
+  ),
+  
+  conditionalPanel(condition = "input.enter_user_btn == 1 && input.userid.length > 0",
   tabsetPanel(
-    #tabPanel('testpanel',
-     #        fluidRow(column(3,uiOutput('slt_diag'))),
-      #       fluidRow(column(4,uiOutput('slt_med'))),
-       #      fluidRow(column(8,uiOutput("distribution_txt")))
-        #    ),
+
     tabPanel('New Patient',
              fluidRow(column(3,uiOutput('br_text'))),
              fluidRow(column(1, actionButton("refresh_vitals_btn", "REFRESH", style="background-color: #0f6ff3; border-color: #2e6da4; font-weight: bold;"))),
@@ -94,7 +102,7 @@ ui <- fluidPage(
              fluidRow(column(10, offset = 1, dataTableOutput('pharm_ref_tbl')))
              )
   )
-  
+  )
 )
 server <- function(input, output, session) {
   
@@ -102,6 +110,9 @@ server <- function(input, output, session) {
   
   
   output$titletext <- renderUI({HTML(paste('<p style="font-size:25px;"><br><b>DR Patient Medical Recorder/Viewer Tool<b></p><br>'))})
+  
+  output$userid_txt <- renderUI({HTML(paste('<p style="font-size:15px;color: red"><b>***Please enter your name for record keeping.<b></p><br>'))})
+  output$currentuser_txt <- renderUI({HTML(paste('<p style="font-size:10px;color: #0f6ff3"><b>Current User: ',toString(input$userid),'<b></p><br>'))})
   
   output$vitals_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Patient Vitals<b></p><br>'))})
   output$l1_txt <- renderUI({HTML(paste('<p style="font-size:15px; margin-bottom: -10px;">________________________________________________________________________________________________________</p>'))})
@@ -124,7 +135,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$refresh_vitals_btn, {
     
-                                          cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+                                          cleartemps <- diagdrug_pull$cleartemps(db_path = dir, userid = toString(input$userid))
                                           
                                           updateTextInput(session, "fname_input", value = "")
                                           updateTextInput(session, "lname_input", value = "")
@@ -161,7 +172,7 @@ server <- function(input, output, session) {
                                       
                                       expr = {
                                         
-                                      pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir)
+                                      pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir, userid = toString(input$userid))
                                       pddemp <- pddemp[c("diagnosis","drug")]
 
 
@@ -182,7 +193,7 @@ server <- function(input, output, session) {
                                     tryCatch(
                                        
                                       expr = {
-                                                  plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir)
+                                                  plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid))
                                                   plrtemp <- plrtemp[c("lab_name","lab_value")]
                                       
                                                   output$patient_lab_res_temp <- renderUI(renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
@@ -197,7 +208,7 @@ server <- function(input, output, session) {
   observeEvent(input$submit_btn, {
                                   diagdrug_pull$final_submit(isolate(input$fname_input), isolate(input$lname_input), isolate(input$age_input), isolate(input$sex_input), 
                                                              isolate(input$wt_input), isolate(input$hr_input), isolate(input$bp_input), isolate(input$rr_input), isolate(input$o2s_input),
-                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses), db_path = dir)
+                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses), db_path = dir, userid = toString(input$userid))
     
                                   updateTextInput(session, "fname_input", value = "")
                                   updateTextInput(session, "lname_input", value = "")
@@ -224,7 +235,10 @@ server <- function(input, output, session) {
                                   
                                   updateSelectInput(session, "slt_glasses", label = "Select Glassess", choices = c("No Glasses","1.00","1.25","1.5","1.75","2.00","2.25","2.5","2.75","3.00","3.25","3.5","3.75","4.00"))
                                   
-                                  cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+                                  cleartemps <- diagdrug_pull$cleartemps(db_path = dir, userid = toString(input$userid))
+                                  
+                                  shinyjs::hide("patient_diag_drug_temp")
+                                  shinyjs::hide("patient_lab_res_temp")
     
   })
   

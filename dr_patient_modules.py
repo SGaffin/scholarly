@@ -2,14 +2,14 @@ import pandas as pd
 import sqlite3
 import datetime
 
-def cleartemps(db_path):
+def cleartemps(db_path, userid):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""DROP TABLE patient_vitals_temp""")
+        c.execute("""DROP TABLE patient_vitals_""" + userid)
         conn.commit()
         conn.close()
     except:
@@ -18,7 +18,7 @@ def cleartemps(db_path):
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""DROP TABLE patient_diag_drug_temp""")
+        c.execute("""DROP TABLE patient_diag_drug_""" + userid)
         conn.commit()
         conn.close()
     except:
@@ -27,7 +27,7 @@ def cleartemps(db_path):
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""DROP TABLE patient_lab_results_temp""")
+        c.execute("""DROP TABLE patient_lab_results_""" + userid)
         conn.commit()
         conn.close()
     except:
@@ -448,14 +448,14 @@ def pharm_submit(yr, db_path):
     
     return(res)
     
-def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, db_path):
+def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, db_path, userid):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""DROP TABLE patient_vitals_temp""")
+        c.execute("""DROP TABLE patient_vitals_""" + userid)
         conn.commit()
         conn.close()
     except:
@@ -463,7 +463,7 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    c.execute("""CREATE TABLE patient_vitals_temp (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime, year)""")
+    c.execute("""CREATE TABLE patient_vitals_""" + userid + """ (patient_id, first_name, last_name, age, sex, heart_rate, blood_pressure, resp_rate, O2_sat, weight, datetime, year)""")
     conn.commit()
     conn.close()
     
@@ -471,13 +471,13 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
                            columns = ['patient_id','first_name','last_name','age','sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
 
     conn = sqlite3.connect(db_path)
-    pv_temp.to_sql('patient_vitals_temp', conn, if_exists='append', index=False)
+    pv_temp.to_sql('patient_vitals_' + userid, conn, if_exists='append', index=False)
     conn.commit()
     conn.close()    
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    pv = c.execute("""SELECT * FROM patient_vitals_temp""")
+    pv = c.execute("""SELECT * FROM patient_vitals_""" + userid)
     pv_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pv.description)[0])
     pv_return.columns = cols
@@ -485,7 +485,7 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_return)
 
 
-def diag_drug_staging(yr, diagnosis, drug, db_path):
+def diag_drug_staging(yr, diagnosis, drug, db_path, userid):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
@@ -501,7 +501,7 @@ def diag_drug_staging(yr, diagnosis, drug, db_path):
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""CREATE TABLE patient_diag_drug_temp (patient_id, diagnosis_id, drug_id)""")
+        c.execute("""CREATE TABLE patient_diag_drug_""" + userid + """(year, patient_id, diagnosis_id, drug_id)""")
         conn.commit()
         conn.close()
     except: 
@@ -527,22 +527,22 @@ def diag_drug_staging(yr, diagnosis, drug, db_path):
     cols = list(pd.DataFrame(dri.description)[0])
     dridata.columns = cols
     
-    ddt = pd.DataFrame([[0, diagnosis, drug]], columns = ['patient_id', 'diagnosis', 'drug'])
+    ddt = pd.DataFrame([[yr, 0, diagnosis, drug]], columns = ['year', 'patient_id', 'diagnosis', 'drug'])
     ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
     ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
     
     ddt_return = ddt[['diagnosis', 'drug']]
-    ddt = ddt[['patient_id', 'diagnosis_id', 'drug_id']]
+    ddt = ddt[['year','patient_id', 'diagnosis_id', 'drug_id']]
 
     conn = sqlite3.connect(db_path)
-    ddt.to_sql('patient_diag_drug_temp', conn, if_exists='append', index=False)
+    ddt.to_sql('patient_diag_drug_' + userid, conn, if_exists='append', index=False)
     conn.commit()
     conn.close()    
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     ddtc = c.execute("""SELECT diagnosis, drug_name AS drug
-                        FROM patient_diag_drug_temp ddt
+                        FROM patient_diag_drug_""" + userid + """ ddt
                         LEFT JOIN(SELECT *
                                   FROM diagnosis_index
                                   WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""') di
@@ -559,14 +559,14 @@ def diag_drug_staging(yr, diagnosis, drug, db_path):
     
     return(ddt_return)
 
-def lab_results_staging(lab_name, lab_value, db_path):
+def lab_results_staging(lab_name, lab_value, db_path, userid):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
         
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""CREATE TABLE patient_lab_results_temp (patient_id, lab_id, lab_value)""")
+        c.execute("""CREATE TABLE patient_lab_results_""" + userid + """ (patient_id, lab_id, lab_value)""")
         conn.commit()
         conn.close()
     except: 
@@ -584,14 +584,14 @@ def lab_results_staging(lab_name, lab_value, db_path):
     lrt = lrt[['patient_id', 'lab_id', 'lab_value']]
 
     conn = sqlite3.connect(db_path)
-    lrt.to_sql('patient_lab_results_temp', conn, if_exists='append', index=False)
+    lrt.to_sql('patient_lab_results_' + userid, conn, if_exists='append', index=False)
     conn.commit()
     conn.close()    
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     lrtc = c.execute("""SELECT lab_name, lrt.lab_value
-                        FROM patient_lab_results_temp lrt
+                        FROM patient_lab_results_""" + userid + """ lrt
                         LEFT JOIN(SELECT DISTINCT lab_id, lab_name
                                   FROM lab_results_index) lri
                         ON lrt.lab_id = lri.lab_id""")
@@ -604,7 +604,7 @@ def lab_results_staging(lab_name, lab_value, db_path):
     return(lrt_return)
 
 
-def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses, db_path):
+def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses, db_path, userid):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
@@ -633,7 +633,7 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
     try:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        lrt = c.execute('SELECT * FROM patient_lab_results_temp')
+        lrt = c.execute('SELECT * FROM patient_lab_results_' + userid)
         lrtdata = pd.DataFrame(c.fetchall())
         cols = list(pd.DataFrame(lrt.description)[0])
         lrtdata.columns = cols
@@ -651,7 +651,7 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
     #patient diagnosis & drug section----------------------------------------------------
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    pdd = c.execute('SELECT * FROM patient_diag_drug_temp')
+    pdd = c.execute('SELECT * FROM patient_diag_drug_' + userid)
     pdddata = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pdd.description)[0])
     pdddata.columns = cols
@@ -695,31 +695,31 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
 
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)>= 1""")
+    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)> 1""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) >= 1""")
+    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) > 1""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) >= 1""")
+    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) > 1""")
     # conn.commit()
     # conn.close()  
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) >= 1""")
+    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) > 1""")
     # conn.commit()
     # conn.close()      
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) >= 1""")
+    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) > 1""")
     # conn.commit()
     # conn.close()          
     
