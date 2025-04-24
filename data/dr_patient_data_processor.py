@@ -21,6 +21,43 @@ db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/dr_patient_data_23.db'
 # patient_data_entry = patient_data_entry.reset_index()
 # patient_data_entry = patient_data_entry.rename(columns = {'index':'patient_id'})
 # patient_data_entry_cache = patient_data_entry
+
+#------------------------
+#Daily Patient Nubmers
+
+# patient_numbers = pd.DataFrame([[0, pd.to_datetime('1/30/2023'), 1]], columns = ['patient_id','datetime','patient_number'])
+# dummyentry = pd.DataFrame([[1, pd.to_datetime('2025-04-20 21:43:26'), 1]], columns = ['patient_id','datetime','patient_number'])
+# patient_numbers = patient_numbers._append(dummyentry)
+# dummyentry = pd.DataFrame([[2, pd.to_datetime('2025-04-20 21:49:09'), 2]], columns = ['patient_id','datetime','patient_number'])
+# patient_numbers = patient_numbers._append(dummyentry)
+# dummyentry = pd.DataFrame([[3, pd.to_datetime('2025-04-21 15:38:40'), 1]], columns = ['patient_id','datetime','patient_number'])
+# patient_numbers = patient_numbers._append(dummyentry)
+# dummyentry = pd.DataFrame([[4, pd.to_datetime('2025-04-22 15:38:40'), 1]], columns = ['patient_id','datetime','patient_number'])
+# patient_numbers = patient_numbers._append(dummyentry)
+# dummyentry = pd.DataFrame([[5, pd.to_datetime('2025-04-23 22:38:40'), 2]], columns = ['patient_id','datetime','patient_number'])
+# patient_numbers = patient_numbers._append(dummyentry)
+
+# conn = sqlite3.connect(db_path)
+# c = conn.cursor()
+# c.execute("""DELETE FROM daily_patient_numbers WHERE patient_id = 5""")
+# # c.execute("""CREATE TABLE daily_patient_numbers (patient_id,datetime,patient_number)""")
+# conn.commit()
+# conn.close()
+
+# conn = sqlite3.connect(db_path)
+# dummyentry.to_sql('daily_patient_numbers', conn, if_exists='append', index=False)
+# conn.commit()
+# conn.close()
+
+conn = sqlite3.connect(db_path)
+c = conn.cursor()
+dpn = c.execute('SELECT * FROM daily_patient_numbers')
+dpndata = pd.DataFrame(c.fetchall())
+cols = list(pd.DataFrame(dpn.description)[0])
+dpndata.columns = cols
+
+
+#------------------------
 #------------------------
 
 

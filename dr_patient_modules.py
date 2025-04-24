@@ -31,8 +31,17 @@ def cleartemps(db_path, userid):
         conn.commit()
         conn.close()
     except:
-        print('patient_lab_results_temp did not exist')        
-    
+        print('patient_lab_results_temp did not exist')    
+        
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE selected_lab_""" + userid)
+        conn.commit()
+        conn.close()
+    except:
+        print('selected_lab__temp did not exist')  
+
     r = 'temp tables dropped'
     
     return(r)
@@ -126,6 +135,147 @@ def patientrecord_pull(yr, db_path):
     # pr_data = pr_data[pr_data['yr'].astype(str)==str(yr)]
     
     return(pr_data)
+
+def existing_patients(yr, db_path):
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()    
+        ep_qry = c.execute(""" SELECT DISTINCT last_name, first_name, pv.patient_id, pv.datetime, patient_number || ' - ' || last_name || ', ' || first_name || ' - ' || pn.datetime AS lastfirst
+                               FROM patient_vitals pv
+                               LEFT JOIN(SELECT *
+                                         FROM daily_patient_numbers) pn
+                               ON pv.patient_id = pn.patient_id
+                               WHERE CAST(year as NVARCHAR) = '""" + str(yr) + """'
+                               ORDER BY pn.datetime desc""")
+                          
+        ep_data = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(ep_qry.description)[0])
+        ep_data.columns = cols 
+    except:
+        print('issue with existing_patients')
+    
+    return(ep_data)
+
+def existing_patient_vitals(yr, db_path, ep):
+    
+    try:
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        pid = int(all_ep.loc[0, 'patient_id'])
+    
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()    
+        pv_qry = c.execute(""" SELECT *
+                               FROM patient_vitals
+                               WHERE CAST(year as NVARCHAR) = '""" + str(yr) + """' and CAST(patient_id AS INTEGER) = """ + str(pid) +""" 
+                               ORDER BY datetime desc""")
+                          
+        pv_data = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pv_qry.description)[0])
+        pv_data.columns = cols 
+    except:
+        pv_data = 'issue with existing_patient_vitals'
+        print('issue with existing_patient_vitals')
+    
+    return(pv_data)
+
+def exist_patient_procs_notes(yr, db_path, ep):
+    try:
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        pid = int(all_ep.loc[0, 'patient_id'])
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()    
+        pn_qry = c.execute(""" SELECT *
+                               FROM patient_procs_notes
+                               WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
+                          
+        pn_data = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pn_qry.description)[0])
+        pn_data.columns = cols 
+        
+    except:
+        print('no procedures or notes for ' + str(ep))
+
+    return(pn_data)
+
+def existing_patient_diagdrug(yr, db_path, ep):
+
+    try:
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        pid = int(all_ep.loc[0, 'patient_id'])
+    
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        diag_drug_qry = c.execute("""SELECT diag.diagnosis, drg.drug_name AS drug
+                                     FROM patient_diag_drug pdd
+                                     LEFT JOIN(SELECT * FROM drug_index) drg
+                                     ON pdd.drug_id = drg.id and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
+                                     LEFT JOIN(SELECT * FROM diagnosis_index) diag
+                                     ON pdd.diagnosis_id = diag.id and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                     WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """' and CAST(patient_id AS INT)  = """ + str(pid) )
+        diag_drug = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(diag_drug_qry.description)[0])
+        diag_drug.columns = cols 
+    except:
+        diag_drug = 'issue with existing_patient_diag_drug'
+        print('issue with existing_patient_diag_drug')
+    
+    return(diag_drug)
+
+def existing_patient_labs(yr, db_path, ep):
+    
+    try:
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        pid = int(all_ep.loc[0, 'patient_id'])
+    
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()    
+        lab_qry = c.execute(""" SELECT lab_name, lr.lab_value
+                                FROM patient_lab_results lr
+                                LEFT JOIN(SELECT DISTINCT lab_id, lab_name 
+                                          FROM lab_results_index) li
+                                ON lr.lab_id = li.lab_id
+                                WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
+                          
+        lab_data = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(lab_qry.description)[0])
+        lab_data.columns = cols 
+    except:
+        lab_data = 'issue with existing_patient_labs'
+        print('issue with existing_patient_labs')
+    
+    return(lab_data)
+
+def exist_patient_glasses(yr, db_path, ep):
+    
+    try:
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        pid = int(all_ep.loc[0, 'patient_id'])
+    
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()    
+        gl_qry = c.execute(""" SELECT reading_glasses  
+                                FROM patient_glasses
+                                WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
+                          
+        gl_data = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(gl_qry.description)[0])
+        gl_data.columns = cols 
+    except:
+        gl_data = pd.DataFrame(['No Glasses'], columns=['reading_glasses'])
+        print('issue with existing_patient_labs')
+    
+    return(gl_data)
 
 def diagdrug_recordviewer(yr, db_path):
     
@@ -559,34 +709,129 @@ def diag_drug_staging(yr, diagnosis, drug, db_path, userid):
     
     return(ddt_return)
 
-def lab_results_staging(lab_name, lab_value, db_path, userid):
-    
-    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
-        
+def diagdrug_staging_ep(yr, db_path, userid, ep):
     try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_diag_drug_""" + userid)
+        c.execute("""CREATE TABLE patient_diag_drug_""" + userid + """ (year, patient_id, diagnosis_id, drug_id)""")
+        conn.commit()
+        conn.close()
+    except:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""CREATE TABLE patient_diag_drug_""" + userid + """ (year, patient_id, diagnosis_id, drug_id)""")
+        conn.commit()
+        conn.close()
+        
+    all_ep = existing_patients(yr, db_path)
+    all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+    
+    pid = int(all_ep.loc[0, 'patient_id'])
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    diag_drug_qry = c.execute("""SELECT pdd.year, pdd.patient_id, diag.id as diagnosis_id, drg.id as drug_id
+                                 FROM patient_diag_drug pdd
+                                 LEFT JOIN(SELECT * FROM drug_index) drg
+                                 ON pdd.drug_id = drg.id and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
+                                 LEFT JOIN(SELECT * FROM diagnosis_index) diag
+                                 ON pdd.diagnosis_id = diag.id and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                 WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """' and CAST(patient_id AS INT)  = """ + str(pid) )
+    diag_drug = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(diag_drug_qry.description)[0])
+    diag_drug.columns = cols 
+    
+    conn = sqlite3.connect(db_path)
+    diag_drug.to_sql('patient_diag_drug_' + userid, conn, if_exists='append', index=False)
+    conn.commit()
+    conn.close()  
+
+def daily_patient_numbers(yr, db_path, userid, ep):    
+    
+    all_ep = existing_patients(yr, db_path)
+    all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+    
+    pid = int(all_ep.loc[0, 'patient_id'])
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()    
+    pn_qry = c.execute(""" SELECT *
+                           FROM daily_patient_numbers
+                           WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
+                      
+    pn_data = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(pn_qry.description)[0])
+    pn_data.columns = cols 
+    
+    pn = int(pn_data.loc[0,'patient_number'])
+    
+    return(pn_data)
+
+def lab_staging_ep(yr, db_path, userid, ep):
+
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE patient_lab_results_""" + userid)
+        c.execute("""CREATE TABLE patient_lab_results_""" + userid + """ (patient_id, lab_id, lab_value)""")
+        conn.commit()
+        conn.close()
+    except:
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
         c.execute("""CREATE TABLE patient_lab_results_""" + userid + """ (patient_id, lab_id, lab_value)""")
         conn.commit()
         conn.close()
-    except: 
-        print('temp patient_lab_results table already exists')
+
+    all_ep = existing_patients(yr, db_path)
+    all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
     
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    lri = c.execute("""SELECT DISTINCT lab_id, lab_name FROM lab_results_index WHERE lab_name = '""" + str(lab_name) + """'""")
-    lridata = pd.DataFrame(c.fetchall())
-    cols = list(pd.DataFrame(lri.description)[0])
-    lridata.columns = cols
-    
-    lrt = pd.DataFrame([[0, lab_name, lab_value]], columns = ['patient_id', 'lab_name', 'lab_value'])
-    lrt = lrt.merge(lridata, how = 'left', on = ['lab_name'])
-    lrt = lrt[['patient_id', 'lab_id', 'lab_value']]
+    pid = int(all_ep.loc[0, 'patient_id'])
 
     conn = sqlite3.connect(db_path)
-    lrt.to_sql('patient_lab_results_' + userid, conn, if_exists='append', index=False)
+    c = conn.cursor()    
+    lr_qry = c.execute(""" SELECT *
+                           FROM patient_lab_results
+                           WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
+                      
+    lrt_data = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lr_qry.description)[0])
+    lrt_data.columns = cols 
+
+    conn = sqlite3.connect(db_path)
+    lrt_data.to_sql('patient_lab_results_' + userid, conn, if_exists='append', index=False)
     conn.commit()
     conn.close()    
+
+def lab_results_staging(lab_name, lab_value, db_path, userid, create = 'Y'):
+    
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    if create == "Y":
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""CREATE TABLE patient_lab_results_""" + userid + """ (patient_id, lab_id, lab_value)""")
+            conn.commit()
+            conn.close()
+        except: 
+            print('temp patient_lab_results table already exists')
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        lri = c.execute("""SELECT DISTINCT lab_id, lab_name FROM lab_results_index WHERE lab_name = '""" + str(lab_name) + """'""")
+        lridata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(lri.description)[0])
+        lridata.columns = cols
+        
+        lrt = pd.DataFrame([[0, lab_name, lab_value]], columns = ['patient_id', 'lab_name', 'lab_value'])
+        lrt = lrt.merge(lridata, how = 'left', on = ['lab_name'])
+        lrt = lrt[['patient_id', 'lab_id', 'lab_value']]
+    
+        conn = sqlite3.connect(db_path)
+        lrt.to_sql('patient_lab_results_' + userid, conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()    
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -598,36 +843,194 @@ def lab_results_staging(lab_name, lab_value, db_path, userid):
     lrt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(lrtc.description)[0])
     lrt_return.columns = cols
-    
+        
     # ddt_return = pd.DataFrame([[diagnosis, drug, procs, notes]])
     
     return(lrt_return)
 
-
-def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses, db_path, userid):
-    
-    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+def selected_lab(labname, db_path, userid, read = 'Y', delete = 'N'):
+    if read != 'Y':
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DROP TABLE selected_lab_""" + userid)
+            c.execute("""CREATE TABLE selected_lab_""" + userid + """ (lab_name)""")
+            conn.commit()
+            conn.close()
+        except:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""CREATE TABLE selected_lab_""" + userid + """ (lab_name)""")
+            conn.commit()
+            conn.close()
+            
+            
+        labname = pd.DataFrame([labname], columns = ['lab_name'])    
+        conn = sqlite3.connect(db_path)
+        labname.to_sql('selected_lab_' + userid, conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()  
+        
+    else:
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            ln_qry = c.execute("""SELECT lab_name
+                                  FROM selected_lab_""" + userid )
+            labname = pd.DataFrame(c.fetchall())
+            cols = list(pd.DataFrame(ln_qry.description)[0])
+            labname.columns = cols
+        except:
+            labname = pd.DataFrame()
+            
+    if delete == 'Y':   
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DROP TABLE selected_lab_""" + userid)
+            conn.commit()
+            conn.close()
+        except:
+            print('selected_lab did not exist to delete')
+            
+    return(labname)
+        
+def lab_results_staging_delete(labname, db_path, userid):
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
-    pdd = c.execute('SELECT MAX(CAST(patient_id AS INT)) as last_id FROM patient_vitals')
-    pdddata = pd.DataFrame(c.fetchall())
-    cols = list(pd.DataFrame(pdd.description)[0])
-    pdddata.columns = cols
+    lrtc = c.execute("""SELECT lab_name, lrt.lab_id
+                        FROM patient_lab_results_""" + userid + """ lrt
+                        LEFT JOIN(SELECT DISTINCT lab_id, lab_name
+                                  FROM lab_results_index) lri
+                        ON lrt.lab_id = lri.lab_id""")
+    lrt_return = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lrtc.description)[0])
+    lrt_return.columns = cols
     
-    patient_id = int(pdddata.loc[0,'last_id']) + 1
+    lrt_return = lrt_return[['lab_id']][lrt_return['lab_name'] == labname].reset_index(drop=True)
+    lrt_return = int(lrt_return.loc[0,'lab_id'])
     
-    #patient vitals section-------------------------------------------------------------
-    dt = pd.to_datetime('now').strftime("%Y-%m-%d %H:%M:%S")
-    yr = datetime.date.today().year
-    pv = pd.DataFrame([[patient_id, fname, lname, age, sex, hr, bp, rr, o2sat, weight, dt, yr]], 
-                      columns = ['patient_id', 'first_name', 'last_name', 'age', 'sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("""DELETE 
+                 FROM patient_lab_results_""" + userid + """ 
+                 WHERE CAST(lab_id AS INTEGER) = """ + str(lrt_return))
+    conn.commit()
+    conn.close()
     
 
-    conn = sqlite3.connect(db_path)
-    pv.to_sql('patient_vitals', conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()    
+    
+    print(labname + ' was deleted for ' + userid)
+
+def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes, glasses, db_path, userid, yr, ep):
+    
+    # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
+    
+    if ep != '':
+        all_ep = existing_patients(yr, db_path)
+        all_ep = all_ep[all_ep['lastfirst'] == ep].reset_index(drop = True)
+        
+        patient_id = int(all_ep.loc[0, 'patient_id'])
+        
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT) = """ + str(patient_id))
+        conn.commit()
+        conn.close()
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) = """ + str(patient_id))
+            conn.commit()
+            conn.close()
+        except: 
+            print('patient_lab_results did not exist for patient ' + str(ep))
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) = """ + str(patient_id))
+            conn.commit()
+            conn.close()
+        except: 
+            print('patient_diag_drug did not exist for patient ' + str(ep))
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) = """ + str(patient_id))
+            conn.commit()
+            conn.close()
+        except: 
+            print('patient_procs_notes did not exist for patient ' + str(ep))            
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) = """ + str(patient_id))
+            conn.commit()
+            conn.close()
+        except: 
+            print('patient_glasses did not exist for patient ' + str(ep))            
+            
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        pn = c.execute("""SELECT patient_number
+                          FROM daily_patient_numbers
+                          WHERE CAST(patient_id AS INTEGER) = """ + str(patient_id))
+        pndata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pn.description)[0])
+        pndata.columns = cols
+        
+        pn = int(pndata.loc[0, 'patient_number'])
+        
+    else: 
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        pdd = c.execute('SELECT MAX(CAST(patient_id AS INT)) as last_id FROM patient_vitals')
+        pdddata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pdd.description)[0])
+        pdddata.columns = cols
+        
+        patient_id = int(pdddata.loc[0,'last_id']) + 1
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        pn = c.execute("""SELECT *
+                          FROM daily_patient_numbers""")
+        pndata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pn.description)[0])
+        pndata.columns = cols
+
+        pndata = pndata[['patient_number']][pd.to_datetime(pndata['datetime']) >= pd.to_datetime(datetime.datetime.today().strftime('%Y-%m-%d'))]
+        # pndata = pndata[['patient_number']][pd.to_datetime(pndata['datetime']) >= pd.to_datetime('2025-04-22')]]]
+        if len(pndata) > 0:
+            pn = pndata.loc[:,'patient_number'].max() + 1
+        else:
+            pn = 1
+        
+        pndata = pd.DataFrame([[patient_id, pd.to_datetime(datetime.datetime.today()).strftime('%Y-%m-%d %H:%M:%S'), pn]], columns = ['patient_id', 'datetime', 'patient_number'])
+        
+        conn = sqlite3.connect(db_path)
+        pndata.to_sql('daily_patient_numbers', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close() 
+    
+    #patient vitals section-------------------------------------------------------------
+    try:
+        dt = pd.to_datetime('now').strftime("%Y-%m-%d %H:%M:%S")
+        yr = datetime.date.today().year
+        pv = pd.DataFrame([[patient_id, fname, lname, age, sex, hr, bp, rr, o2sat, weight, dt, yr]], 
+                          columns = ['patient_id', 'first_name', 'last_name', 'age', 'sex', 'heart_rate', 'blood_pressure', 'resp_rate', 'O2_sat', 'weight','datetime', 'year'])
+        
+    
+        conn = sqlite3.connect(db_path)
+        pv.to_sql('patient_vitals', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()  
+    except:
+        print('no vitals entered yet')
+    
 
     #patient lab results section--------------------------------------------------------
     try:
@@ -649,29 +1052,33 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
         print("No labs performed")
     
     #patient diagnosis & drug section----------------------------------------------------
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    pdd = c.execute('SELECT * FROM patient_diag_drug_' + userid)
-    pdddata = pd.DataFrame(c.fetchall())
-    cols = list(pd.DataFrame(pdd.description)[0])
-    pdddata.columns = cols
-    
-    pdddata.loc[:,'patient_id'] = patient_id
-    
-    conn = sqlite3.connect(db_path)
-    pdddata.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()    
-    
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        pdd = c.execute('SELECT * FROM patient_diag_drug_' + userid)
+        pdddata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(pdd.description)[0])
+        pdddata.columns = cols
+        
+        pdddata.loc[:,'patient_id'] = patient_id
+        
+        conn = sqlite3.connect(db_path)
+        pdddata.to_sql('patient_diag_drug', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()    
+    except:
+        print('no diag_drugs entered yet')
     #patient procedures and notes section----------------------------------------------------
-    
-    ppn = pd.DataFrame([[patient_id, procs, notes]], columns = ['patient_id', 'procs', 'notes'])
-    
-    conn = sqlite3.connect(db_path)
-    ppn.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()    
-    
+    try:
+        ppn = pd.DataFrame([[patient_id, procs, notes]], columns = ['patient_id', 'procs', 'notes'])
+        
+        conn = sqlite3.connect(db_path)
+        ppn.to_sql('patient_procs_notes', conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()    
+    except:
+        print('no procs notes entered yet')
+        
     #patient glasses section ----------------------------------------------------------------
     if glasses != 'No Glasses':
         glasses = pd.DataFrame([[patient_id, glasses]], columns = ['patient_id', 'reading_glasses'])
@@ -681,7 +1088,7 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
         conn.commit()
         conn.close()
 
-    success_text = 'Patient has been submitted to system.'
+    success_text = str(pn)
 
     return(success_text)
     
@@ -695,31 +1102,37 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
 
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)> 1""")
+    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)> 4""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) > 1""")
+    # c.execute("""DELETE FROM daily_patient_numbers WHERE CAST(patient_id AS INT) > 4""")
+    # conn.commit()
+    # conn.close()   
+    
+    # conn = sqlite3.connect(db_path)
+    # c = conn.cursor()
+    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) > 4""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) > 1""")
+    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) > 4""")
     # conn.commit()
     # conn.close()  
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) > 1""")
+    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) > 4""")
     # conn.commit()
     # conn.close()      
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) > 1""")
+    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) > 4""")
     # conn.commit()
     # conn.close()          
     

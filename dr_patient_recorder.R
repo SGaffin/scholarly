@@ -19,6 +19,7 @@ diagdrug_pull <- import_from_path("dr_patient_modules",getwd())
 
 #make this run every time app is refreshed
 # cleartemps <- diagdrug_pull$cleartemps(db_path = dir)
+#create a clear all staging tables module
 clear_pharm <- diagdrug_pull$clear_pharm(db_path = dir)
 
 #runApp("dr_patient_recorder.R")
@@ -45,6 +46,7 @@ ui <- fluidPage(
              fluidRow(column(3,uiOutput('br_text'))),
              fluidRow(column(1, actionButton("refresh_vitals_btn", "REFRESH", style="background-color: #0f6ff3; border-color: #2e6da4; font-weight: bold;"))),
              fluidRow(column(12,uiOutput("l1_txt"))),
+             fluidRow(column(5, uiOutput("exist_patient_slt"))),
              fluidRow(column(12,uiOutput("vitals_txt"))),
              fluidRow(column(2, textInput("fname_input","First Name", "")), column(2, style='padding-left:0px;',textInput("lname_input","Last Name", ""))), 
              fluidRow(column(2, textInput("age_input","Age", "")), 
@@ -60,7 +62,7 @@ ui <- fluidPage(
              fluidRow(column(12,uiOutput("labres_txt1"))),
              fluidRow(column(3,uiOutput('slt_lab_name')), column(2, style='padding-left:0px;',uiOutput('slt_lab_val'))),
              fluidRow(column(2, style='padding-top:20px;' ,actionButton("add_lab_btn", "Add Lab", style="background-color: gray; border-color: #2e6da4"))),
-             fluidRow(column(12, hidden(uiOutput('patient_lab_res_temp')))),
+             fluidRow(column(12, hidden(dataTableOutput('patient_lab_res_temp')))),
              fluidRow(column(12,uiOutput("l3_txt"))),
              fluidRow(column(12,uiOutput("diagdrug_txt1"))),
              fluidRow(column(12,uiOutput("diagdrug_txt2"))),
@@ -115,7 +117,7 @@ server <- function(input, output, session) {
   output$currentuser_txt <- renderUI({HTML(paste('<p style="font-size:10px;color: #0f6ff3"><b>Current User: ',toString(input$userid),'<b></p><br>'))})
   
   output$vitals_txt <- renderUI({HTML(paste('<p style="font-size:15px;background-color: #FFFF00;"><b>Patient Vitals<b></p><br>'))})
-  output$l1_txt <- renderUI({HTML(paste('<p style="font-size:15px; margin-bottom: -10px;">________________________________________________________________________________________________________</p>'))})
+  output$l1_txt <- renderUI({HTML(paste('<p style="font-size:15px; margin-bottom: -10px;">________________________________________________________________________________________________________</p><br>'))})
   output$l2_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
   output$labres_txt1 <- renderUI({HTML(paste('<p style="font-size:15px; background-color: #FFFF00;"><b>Lab Tests and Results</b></p>'))})
   output$l3_txt <- renderUI({HTML(paste('<p style="font-size:15px;">________________________________________________________________________________________________________</p>'))})
@@ -133,9 +135,34 @@ server <- function(input, output, session) {
   
   dir <- paste0(getwd(), '/dr_patient_data_23.db')
   
-  observeEvent(input$refresh_vitals_btn, {
+  observeEvent(input$enter_user_btn, {
+    
+    if (trimws(toString(input$userid)) == '') {
+      
+      showModal(modalDialog(
+        title = "Bad User Id Entry",
+        paste0("Please do not submit an empty userid.  Try Again :)!"),
+        
+        footer = fluidRow(column(1, style='padding-left:75px;', actionButton("baduserid_btn", "OK")))
+      ))
+      
+    }
+    
+  })
+  
+  observeEvent(input$baduserid_btn,{
+    
+    session$reload()
+    
+    })
+  
+  observeEvent(c(input$refresh_vitals_btn, input$enter_user_btn), {
     
                                           cleartemps <- diagdrug_pull$cleartemps(db_path = dir, userid = toString(input$userid))
+                                          
+                                          existing_patients <- diagdrug_pull$existing_patients(substr(Sys.Date(), 1, 4), db_path = dir)
+                                          ep_choices <- existing_patients$lastfirst
+                                          updateSelectInput(session, "exist_patient_slt","Edit Existing Patient",choices = c("", ep_choices))
                                           
                                           updateTextInput(session, "fname_input", value = "")
                                           updateTextInput(session, "lname_input", value = "")
@@ -153,7 +180,7 @@ server <- function(input, output, session) {
                                           
                                           diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
                                           diagnosis_choices <- diagnosis_drug_ref$diagnosis
-                                          updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c(" ", diagnosis_choices))
+                                          updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c("No Diagnosis", diagnosis_choices))
                                           
                                           
                                           updateTextAreaInput(session, "proc_txt", value = "")
@@ -166,19 +193,80 @@ server <- function(input, output, session) {
                                           
                                           })
   
-  observeEvent(input$save_diagdrug_btn, {
+  
+  output$exist_patient_slt <- renderUI({ 
+    
+              existing_patients <- diagdrug_pull$existing_patients(substr(Sys.Date(), 1, 4), db_path = dir)
+              ep_choices <- existing_patients$lastfirst
 
+
+              selectInput("exist_patient_slt",
+                          "Edit Existing Patient",
+                          choices = c("", ep_choices))
+    
+    })
+  
+  observeEvent(input$exist_patient_slt, {
+    #blah, test2 - 2025-04-17 16:14:16
+    if (toString(input$exist_patient_slt) != '') {
+              epv <- diagdrug_pull$existing_patient_vitals(substr(Sys.Date(), 1, 4), dir, toString(input$exist_patient_slt))
+              ep_pn <- diagdrug_pull$exist_patient_procs_notes(substr(Sys.Date(), 1, 4), dir, toString(input$exist_patient_slt))
+              ep_glasses <- diagdrug_pull$exist_patient_glasses(substr(Sys.Date(), 1, 4), dir, toString(input$exist_patient_slt))
+              
+              # fn <- toString(epv$first_name[1])
+              try({
+              updateTextInput(session, "fname_input", value = toString(epv$first_name[1]))
+              updateTextInput(session, "lname_input", value = toString(epv$last_name[1]))
+              updateTextInput(session, "age_input", value = toString(epv$age[1]))
+              updateTextInput(session, "sex_input", value = toString(epv$sex[1]))
+              updateTextInput(session, "wt_input", value = toString(epv$weight[1]))
+              updateTextInput(session, "hr_input", value = toString(epv$heart_rate[1]))
+              updateTextInput(session, "bp_input", value = toString(epv$blood_pressure[1]))
+              updateTextInput(session, "rr_input", value = toString(epv$resp_rate[1]))
+              updateTextInput(session, "o2s_input", value = toString(epv$O2_sat[1]))
+              
+              updateTextAreaInput(session, "proc_txt", value = toString(ep_pn$procs[1]))
+              updateTextAreaInput(session, "notes_txt", value = toString(ep_pn$notes[1]))
+              
+              updateTextInput(session, "slt_glasses", value = toString(ep_glasses$reading_glasses[1]))
+              
+              })
+    }
+    
+  })
+  
+  observeEvent(c(input$save_diagdrug_btn, input$exist_patient_slt), {
+                                    pddemp <- data.frame()
                                     tryCatch(
                                       
                                       expr = {
                                         
-                                      pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir, userid = toString(input$userid))
-                                      pddemp <- pddemp[c("diagnosis","drug")]
+                                        #'doe, jane - 2025-04-19 14:38:17'
+                                        if(((toString(input$slt_diag_np) == 'No Diagnosis') || (toString(input$slt_diag_np) == '')) && (toString(input$exist_patient_slt) != '') && (toString(input$userid) != '')) {
 
+                                          #sets the staging area to anything already in system for this patient
+                                          pddemp <- diagdrug_pull$diagdrug_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
+                                          print('updated diagdrug staging from existing patient')
+                                          #pulls the same data to show in the interface
+                                          pddemp <- diagdrug_pull$existing_patient_diagdrug(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
+                                          print('pulled existing patient diag drug work')
+                                        } else if ((toString(input$slt_diag_np) != 'No Diagnosis')  && (toString(input$userid) != '')) {
 
-                                      output$patient_diag_drug_temp <- renderUI(renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
-                                      
-                                      shinyjs::show("patient_diag_drug_temp")
+                                          pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir, userid = toString(input$userid))
+                                          pddemp <- pddemp[c("diagnosis","drug")]
+                                        }
+
+                                        output$patient_diag_drug_temp <- renderUI(renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+
+                                        shinyjs::show("patient_diag_drug_temp")
+                                        
+                                      # pddemp <- diagdrug_pull$diag_drug_staging(substr(Sys.Date(), 1, 4), isolate(input$slt_diag_np),isolate(input$slt_drug_np), db_path = dir, userid = toString(input$userid))
+                                      # pddemp <- pddemp[c("diagnosis","drug")]
+                                      # 
+                                      # 
+                                      # output$patient_diag_drug_temp <- renderUI(renderDT(pddemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+                                      # 
+                                      # shinyjs::show("patient_diag_drug_temp")
                                       
                                       },
                                       error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
@@ -189,26 +277,131 @@ server <- function(input, output, session) {
   
 
   
-  observeEvent(input$add_lab_btn, {
+  observeEvent(c(input$add_lab_btn, input$exist_patient_slt, input$slt_lab_name), { #, input$deletelab_btn
+                                    plrtemp <- data.frame()
+                                    
                                     tryCatch(
-                                       
-                                      expr = {
-                                                  plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid))
-                                                  plrtemp <- plrtemp[c("lab_name","lab_value")]
-                                      
-                                                  output$patient_lab_res_temp <- renderUI(renderDT(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')))
+
+                                      expr = { 
+                                                  
+                                                  ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'N')
+                                                  # 
+                                                  if ((length(ln) > 0)) {
+                                                    
+                                                    plrtemp <- diagdrug_pull$lab_results_staging(' ', ' ', db_path = dir, userid = toString(input$userid), create = 'N')
+                                                    plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                    ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'Y')
+                                                    
+                                                  } else if((toString(input$exist_patient_slt) != '') && (toString(input$userid) != '') && (toString(input$slt_lab_name) == 'No Labs')) { #((toString(input$slt_lab_name) == 'No Labs') ||(toString(input$slt_lab_name) == '')) && 
+                                                    
+                                                    #sets the staging area to anything already in system for this patient
+                                                    plrtemp <- diagdrug_pull$lab_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
+                                                    print('updated lab staging from existing patient')
+                                                    #pulls the same data to show in the interface
+                                                    plrtemp <- diagdrug_pull$existing_patient_labs(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
+                                                    print('pulled existing patient lab work')
+                                                  } else if ((toString(input$slt_lab_name) != 'No Labs')  && (toString(input$userid) != '')){ # 
+                                                    
+                                                    # delay(2000, print("delay 2 seconds"))
+                                                    plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid), create = 'Y')
+                                                    plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                  } 
+                                        
+                              
+                                                  
+                                                  output$patient_lab_res_temp <- DT::renderDataTable(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')) #
+                                                  if (input$slt_lab_name != 'No Labs') {
+                                                    lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
+                                                    lab_names <- unique(lab_test_ref$lab_name)
+                                                    updateSelectInput(session, "slt_lab_name", label = "Select Lab Test", choices = c("No Labs",lab_names))
+                                                    
+                                                    lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
+                                                    lab_vals <- rbind(lab_test_ref$lab_value[lab_test_ref$lab_name==input$slt_lab_name])
+                                                    updateSelectInput(session, "slt_lab_val", "Select Lab Result", choices = c(" ", lab_vals))
+                                                  }
                                                   
                                                   shinyjs::show("patient_lab_res_temp")
+                                                  
                                       },
-                                      error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))}
+                                      error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))
+                                        print(paste0('there was an error pulling labs for: ',toString(input$exist_patient_slt)))
+                                        
+                                  }
                                     )
   })
   
+  observeEvent(input$patient_lab_res_temp_cell_clicked, {
+
+    if(length(input$patient_lab_res_temp_cell_clicked) > 0) {
+    # pr_edit <- diagdrug_pull$pharm_stage_view(db_path = dir)
+    # if(length(pr_edit) == 0){pr_edit <- diagdrug_pull$pharm_recordviewer(toString(input$pharm_refyr_slt), db_path = dir)}
+    
+    
+    # pr_edit[order(pr_edit$drug_name), ]
+    
+    #get values
+    info <- input$patient_lab_res_temp_cell_clicked
+    i = as.numeric(info$row)
+
+    print(paste0('clicked lab table on ', toString(info)))
+
+    plrtemp <- diagdrug_pull$lab_results_staging(toString(' '),toString(' '), db_path = dir, userid = toString(input$userid), create = 'N')
+    plrtemp <- plrtemp[c("lab_name","lab_value")]
+    plrtemp <- toString(plrtemp$lab_name[i])
+    print(plrtemp)
+    
+    slt_lab <- diagdrug_pull$selected_lab(labname = plrtemp, db_path = dir, userid = toString(input$userid), read = 'N', delete = 'N')
+    
+    showModal(modalDialog(
+      title = "Delete Lab???",
+      plrtemp,
+      footer = fluidRow(column(1,offset = 4, style='padding-left:75px;', actionButton("deletelab_btn", "DELETE"))
+                        ,
+                        column(1, offset=7, modalButton("CANCEL"))
+                        )
+    ))
+    
+    
+    }
+})
+  
+ observeEvent(input$deletelab_btn, {
+    
+   #creation of this button is triggering this action but the actual click isn't running this event : (
+   
+    print('about to call delete operation...')
+    ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'N')
+    ln <- toString(ln$lab_name[1])
+    print(ln)
+    if (ln != '') {
+      print(ln)
+      diagdrug_pull$lab_results_staging_delete(labname = ln,db_path = dir, userid = toString(input$userid))
+      print('deleted')
+      removeModal()
+    }
+
+    # delay(1000, print("delay 1 second"))
+
+    lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
+    lab_names <- unique(lab_test_ref$lab_name)
+    updateSelectInput(session, "slt_lab_name", label = "Select Lab Test", choices = c("No Labs",lab_names))
+
+    lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
+    lab_vals <- rbind(lab_test_ref$lab_value[lab_test_ref$lab_name==input$slt_lab_name])
+    updateSelectInput(session, "slt_lab_val", "Select Lab Result", choices = c(" ", lab_vals))
+
+ })
   
   observeEvent(input$submit_btn, {
-                                  diagdrug_pull$final_submit(isolate(input$fname_input), isolate(input$lname_input), isolate(input$age_input), isolate(input$sex_input), 
+                                  pn <- diagdrug_pull$final_submit(isolate(input$fname_input), isolate(input$lname_input), isolate(input$age_input), isolate(input$sex_input), 
                                                              isolate(input$wt_input), isolate(input$hr_input), isolate(input$bp_input), isolate(input$rr_input), isolate(input$o2s_input),
-                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses), db_path = dir, userid = toString(input$userid))
+                                                             isolate(input$proc_txt), isolate(input$notes_txt), isolate(input$slt_glasses), 
+                                                             db_path = dir, userid = toString(input$userid),
+                                                             yr = substr(Sys.Date(), 1, 4), ep = toString(input$exist_patient_slt))
+                                  
+                                  existing_patients <- diagdrug_pull$existing_patients(substr(Sys.Date(), 1, 4), db_path = dir)
+                                  ep_choices <- existing_patients$lastfirst
+                                  updateSelectInput(session, "exist_patient_slt","Edit Existing Patient",choices = c("", ep_choices))
     
                                   updateTextInput(session, "fname_input", value = "")
                                   updateTextInput(session, "lname_input", value = "")
@@ -227,7 +420,7 @@ server <- function(input, output, session) {
                                   
                                   diagnosis_drug_ref <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
                                   diagnosis_choices <- diagnosis_drug_ref$diagnosis
-                                  updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c(" ", diagnosis_choices))
+                                  updateSelectInput(session, "slt_diag_np", label = "Select Diagnosis", choices = c("No Diagnosis", diagnosis_choices))
                                   
                                   
                                   updateTextAreaInput(session, "proc_txt", value = "")
@@ -239,10 +432,22 @@ server <- function(input, output, session) {
                                   
                                   shinyjs::hide("patient_diag_drug_temp")
                                   shinyjs::hide("patient_lab_res_temp")
+                                  
+                                  # diagdrug_pull$patient_number_assignment(db_path)
+                                  
+                                  showModal(modalDialog(
+                                    title = "Success!",
+                                    HTML(paste0('<p style="font-size:45px;"><b>#',pn,'<b></p>')),
+                                    paste0('Patient submitted to the system successfully'),
+                                    
+                                    footer = fluidRow(column(1, style='padding-left:75px;', modalButton("OK")))
+                                  ))
+                                  
     
   })
   
-  
+
+
 
   output$diag_drug_ref_tbl <- renderUI({
       ddr <- diagdrug_pull$diagdrug_pull(substr(Sys.Date(), 1, 4), db_path = dir)
@@ -293,7 +498,7 @@ server <- function(input, output, session) {
                                     
                                     selectInput("slt_diag_np", 
                                                 "Select Diagnosis", 
-                                              choices = c(" ", diagnosis_choices))
+                                              choices = c("No Diagnosis", diagnosis_choices))
                                   
                                 })
   
@@ -345,8 +550,9 @@ server <- function(input, output, session) {
 
   
   observeEvent(c(input$pharm_refyr_slt, input$pharm_newyr_slt, input$add_drug_btn, input$sub_pharm_btn),{
+                
                 output$pharm_ref_tbl <- renderDT({
-                                
+                                                  pr <- data.frame()
                                                   tryCatch(                                
                   
                                                   {pr <- diagdrug_pull$pharm_stage_view(db_path = dir)
