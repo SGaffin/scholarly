@@ -277,39 +277,73 @@ server <- function(input, output, session) {
   
 
   
-  observeEvent(c(input$add_lab_btn, input$exist_patient_slt, input$slt_lab_name), { #, input$deletelab_btn
+  observeEvent(c(input$add_lab_btn, input$exist_patient_slt, input$deletelab_btn), { #, input$deletelab_btn
                                     plrtemp <- data.frame()
+                                    ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'N')
                                     
                                     tryCatch(
 
                                       expr = { 
                                                   
-                                                  ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'N')
-                                                  # 
-                                                  if ((length(ln) > 0)) {
-                                                    
-                                                    plrtemp <- diagdrug_pull$lab_results_staging(' ', ' ', db_path = dir, userid = toString(input$userid), create = 'N')
-                                                    plrtemp <- plrtemp[c("lab_name","lab_value")]
-                                                    ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'Y')
-                                                    
-                                                  } else if((toString(input$exist_patient_slt) != '') && (toString(input$userid) != '') && (toString(input$slt_lab_name) == 'No Labs')) { #((toString(input$slt_lab_name) == 'No Labs') ||(toString(input$slt_lab_name) == '')) && 
-                                                    
-                                                    #sets the staging area to anything already in system for this patient
-                                                    plrtemp <- diagdrug_pull$lab_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
-                                                    print('updated lab staging from existing patient')
-                                                    #pulls the same data to show in the interface
-                                                    plrtemp <- diagdrug_pull$existing_patient_labs(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
-                                                    print('pulled existing patient lab work')
-                                                  } else if ((toString(input$slt_lab_name) != 'No Labs')  && (toString(input$userid) != '')){ # 
-                                                    
-                                                    # delay(2000, print("delay 2 seconds"))
-                                                    plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid), create = 'Y')
-                                                    plrtemp <- plrtemp[c("lab_name","lab_value")]
-                                                  } 
+                                                  # ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'N')
+                                                  # # 
+                                                  # if ((length(ln) > 0)) {
+                                                  #   
+                                                  #   plrtemp <- diagdrug_pull$lab_results_staging(' ', ' ', db_path = dir, userid = toString(input$userid), create = 'N')
+                                                  #   plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                  #   ln <- diagdrug_pull$selected_lab(labname = ' ', db_path = dir, userid = toString(input$userid), read = 'Y', delete = 'Y')
+                                                  #   
+                                                  # } else if((toString(input$exist_patient_slt) != '') && (toString(input$userid) != '') && (toString(input$slt_lab_name) == 'No Labs')) { #((toString(input$slt_lab_name) == 'No Labs') ||(toString(input$slt_lab_name) == '')) && 
+                                                  #   
+                                                  #   #sets the staging area to anything already in system for this patient
+                                                  #   plrtemp <- diagdrug_pull$lab_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
+                                                  #   print('updated lab staging from existing patient')
+                                                  #   #pulls the same data to show in the interface
+                                                  #   plrtemp <- diagdrug_pull$existing_patient_labs(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
+                                                  #   print('pulled existing patient lab work')
+                                                  # } else if ((toString(input$slt_lab_name) != 'No Labs')  && (toString(input$userid) != '')){ # 
+                                                  #   
+                                                  #   # delay(2000, print("delay 2 seconds"))
+                                                  #   plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid), create = 'Y')
+                                                  #   plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                  # } 
+                                        
+                                                 tryCatch({
+                                                   if ((toString(input$slt_lab_name) != 'No Labs')  && (toString(input$userid) != '')){
+                                                       plrtemp <- diagdrug_pull$lab_results_staging(isolate(input$slt_lab_name),isolate(input$slt_lab_val), db_path = dir, userid = toString(input$userid), create = 'Y')
+                                                       plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                     
+                                                   } else if ((toString(input$exist_patient_slt) == '') && (toString(input$userid) != '')) {
+                                                   
+                                                       plrtemp <- diagdrug_pull$lab_results_staging(' ', ' ', db_path = dir, userid = toString(input$userid), create = 'N')
+                                                       plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                       
+                                                       } else if ((toString(input$exist_patient_slt) != '') && (length(ln) == 0)){
+                                                         plrtemp <- diagdrug_pull$lab_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
+                                                         print('updated lab staging from existing patient')
+                                                         #pulls the same data to show in the interface
+                                                         plrtemp <- diagdrug_pull$existing_patient_labs(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
+                                                         print('pulled existing patient lab work')
+                                                       } else if ((toString(input$exist_patient_slt) != '') && (length(ln) > 0)){
+                                                         plrtemp <- diagdrug_pull$lab_results_staging(' ', ' ', db_path = dir, userid = toString(input$userid), create = 'N')
+                                                         plrtemp <- plrtemp[c("lab_name","lab_value")]
+                                                       }
+                                                       
+                                                 },
+                                                          error = function(e){
+                                                            plrtemp <- diagdrug_pull$lab_staging_ep(substr(Sys.Date(), 1, 4), db_path = dir, userid = toString(input$userid), ep = toString(input$exist_patient_slt))
+                                                            print('updated lab staging from existing patient')
+                                                            #pulls the same data to show in the interface
+                                                            plrtemp <- diagdrug_pull$existing_patient_labs(substr(Sys.Date(), 1, 4), db_path = dir, ep = toString(input$exist_patient_slt))
+                                                            print('pulled existing patient lab work')
+                                                            
+                                                         })
                                         
                               
                                                   
                                                   output$patient_lab_res_temp <- DT::renderDataTable(plrtemp, rownames = FALSE, selection = 'single', options = list(dom = 't')) #
+                                                  shinyjs::show("patient_lab_res_temp")
+                                                  
                                                   if (input$slt_lab_name != 'No Labs') {
                                                     lab_test_ref <- diagdrug_pull$lab_tests_pull(db_path = dir)
                                                     lab_names <- unique(lab_test_ref$lab_name)
@@ -320,7 +354,7 @@ server <- function(input, output, session) {
                                                     updateSelectInput(session, "slt_lab_val", "Select Lab Result", choices = c(" ", lab_vals))
                                                   }
                                                   
-                                                  shinyjs::show("patient_lab_res_temp")
+                                                  
                                                   
                                       },
                                       error = function(e){HTML(paste0('<br><p style="font-size:12px; color: red"><b>No entries have been saved</b></p>'))
