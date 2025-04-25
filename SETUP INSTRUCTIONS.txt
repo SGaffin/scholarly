@@ -1,0 +1,44 @@
+STEP 1
+Install Anaconda ...choose the windows option
+https://www.anaconda.com/download/success
+
+STEP 2
+Install Python dependencies
+-->should only be sqlite3
+   open anaconda prompt from start menu
+   run the following (you should be able to copy and paste this straight into the prompt)
+	pip install sqlite3
+
+STEP 3
+Install R...the version we are using is R-4.4.2
+https://cran.r-project.org/bin/windows/base/old/
+
+STEP 4
+Install RStudio...choose option #2
+https://posit.co/download/rstudio-desktop/
+
+STEP 5
+Install R dependencies...run the following lines one at a time in the RStudio console
+install.packages("shiny")
+install.packages("shinyjs")
+install.packages("bslib")
+install.packages("DT")
+install.packages("reticulate")
+install.packages("dplyr")
+
+STEP 6
+update the location of the python.exe (line 14) file in dr_patient_recorder.R file
+
+STEP 7
+PAY ATTENTION...
+RIGHT CLICK on "patient_recorder.bat" file.  Select "Edit in Notepad"
+update the ipaddress > run ipconfig from the command line and copy the IPv4 Address.  make sure to add :1111 to the end of the ipaddress
+update the location to the RScript file
+update the location of the dr_patient_recorder.R file
+save and close this file (make sure it saves as a .bat file NOT .txt file)
+
+STEP 8
+Create a short cut of the "patient_recorder.bat" file and paste it to your desktop
+If you want to be cute then change the icon of the short cut to the 'dr imp.ico' file
+
+

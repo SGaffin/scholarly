@@ -6,7 +6,7 @@ library(bslib)
 library(DT)
 library(reticulate)
 library(dplyr)
-library(RSQLite)
+
 
 
 # setwd("C:/Users/jaett/Documents/GitHub/scholarly")
