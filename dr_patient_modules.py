@@ -40,7 +40,16 @@ def cleartemps(db_path, userid):
         conn.commit()
         conn.close()
     except:
-        print('selected_lab__temp did not exist')  
+        print('selected_lab_temp did not exist')  
+
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute("""DROP TABLE selected_diagnosis_""" + userid)
+        conn.commit()
+        conn.close()
+    except:
+        print('selected_diagnosis_temp did not exist')  
 
     r = 'temp tables dropped'
     
@@ -635,7 +644,7 @@ def patient_vitals_staging(first_name, last_name, age, sex, heart_rate, blood_pr
     return(pv_return)
 
 
-def diag_drug_staging(yr, diagnosis, drug, db_path, userid):
+def diag_drug_staging(yr, diagnosis, drug, db_path, userid, create = 'Y'):
     
     # db_path = 'C:/Users/jaett/Documents/GitHub/scholarly/data/dr_patient_data_23.db'
     
@@ -647,47 +656,47 @@ def diag_drug_staging(yr, diagnosis, drug, db_path, userid):
     #     conn.close()
     # except:
     #     print('temp patient_diag_drug table did not exist')
-    
-    try:
+    if create == 'Y':
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""CREATE TABLE patient_diag_drug_""" + userid + """(year, patient_id, diagnosis_id, drug_id)""")
+            conn.commit()
+            conn.close()
+        except: 
+            print('temp patient_diag_drug table already exists')
+        
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        c.execute("""CREATE TABLE patient_diag_drug_""" + userid + """(year, patient_id, diagnosis_id, drug_id)""")
+        di = c.execute("""SELECT id AS diagnosis_id, diagnosis 
+                          FROM diagnosis_index 
+                          WHERE diagnosis = '""" + str(diagnosis) + """' and 
+                                CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
+        didata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(di.description)[0])
+        didata.columns = cols
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        dri = c.execute("""SELECT id AS drug_id, drug_name 
+                           FROM drug_index 
+                           WHERE drug_name = '""" + str(drug) + """' and 
+                                 CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
+        dridata = pd.DataFrame(c.fetchall())
+        cols = list(pd.DataFrame(dri.description)[0])
+        dridata.columns = cols
+        
+        ddt = pd.DataFrame([[yr, 0, diagnosis, drug]], columns = ['year', 'patient_id', 'diagnosis', 'drug'])
+        ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
+        ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
+        
+        ddt_return = ddt[['diagnosis', 'drug']]
+        ddt = ddt[['year','patient_id', 'diagnosis_id', 'drug_id']]
+    
+        conn = sqlite3.connect(db_path)
+        ddt.to_sql('patient_diag_drug_' + userid, conn, if_exists='append', index=False)
         conn.commit()
-        conn.close()
-    except: 
-        print('temp patient_diag_drug table already exists')
-    
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    di = c.execute("""SELECT id AS diagnosis_id, diagnosis 
-                      FROM diagnosis_index 
-                      WHERE diagnosis = '""" + str(diagnosis) + """' and 
-                            CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
-    didata = pd.DataFrame(c.fetchall())
-    cols = list(pd.DataFrame(di.description)[0])
-    didata.columns = cols
-    
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    dri = c.execute("""SELECT id AS drug_id, drug_name 
-                       FROM drug_index 
-                       WHERE drug_name = '""" + str(drug) + """' and 
-                             CAST(year AS NVARCHAR) = '""" + str(yr) +"""'""")
-    dridata = pd.DataFrame(c.fetchall())
-    cols = list(pd.DataFrame(dri.description)[0])
-    dridata.columns = cols
-    
-    ddt = pd.DataFrame([[yr, 0, diagnosis, drug]], columns = ['year', 'patient_id', 'diagnosis', 'drug'])
-    ddt = ddt.merge(didata, how = 'left', on = ['diagnosis'])
-    ddt = ddt.merge(dridata, how = 'left', left_on = ['drug'], right_on = ['drug_name'])
-    
-    ddt_return = ddt[['diagnosis', 'drug']]
-    ddt = ddt[['year','patient_id', 'diagnosis_id', 'drug_id']]
-
-    conn = sqlite3.connect(db_path)
-    ddt.to_sql('patient_diag_drug_' + userid, conn, if_exists='append', index=False)
-    conn.commit()
-    conn.close()    
+        conn.close()    
     
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
@@ -848,6 +857,54 @@ def lab_results_staging(lab_name, lab_value, db_path, userid, create = 'Y'):
     
     return(lrt_return)
 
+def selected_diagnosis(diagnosis, db_path, userid, read = 'Y', delete = 'N'):
+    if read != 'Y':
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DROP TABLE selected_diagnosis_""" + userid)
+            c.execute("""CREATE TABLE selected_diagnosis_""" + userid + """ (diagnosis)""")
+            conn.commit()
+            conn.close()
+        except:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""CREATE TABLE selected_diagnosis_""" + userid + """ (diagnosis)""")
+            conn.commit()
+            conn.close()
+            
+            
+        diagnosis = pd.DataFrame([diagnosis], columns = ['diagnosis'])    
+        conn = sqlite3.connect(db_path)
+        diagnosis.to_sql('selected_diagnosis_' + userid, conn, if_exists='append', index=False)
+        conn.commit()
+        conn.close()  
+        
+    else:
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            diag_qry = c.execute("""SELECT diagnosis
+                                  FROM selected_diagnosis_""" + userid )
+            diagnosis = pd.DataFrame(c.fetchall())
+            cols = list(pd.DataFrame(diag_qry.description)[0])
+            diagnosis.columns = cols
+        except:
+            diagnosis = pd.DataFrame()
+            
+    if delete == 'Y':   
+        try:
+            conn = sqlite3.connect(db_path)
+            c = conn.cursor()
+            c.execute("""DROP TABLE selected_diagnosis_""" + userid)
+            conn.commit()
+            conn.close()
+        except:
+            print('selected_diagnosis_ did not exist to delete')
+            
+    return(diagnosis)
+
 def selected_lab(labname, db_path, userid, read = 'Y', delete = 'N'):
     if read != 'Y':
         try:
@@ -895,6 +952,35 @@ def selected_lab(labname, db_path, userid, read = 'Y', delete = 'N'):
             print('selected_lab did not exist to delete')
             
     return(labname)
+
+def diagdrug_staging_delete(diagnosis, db_path, userid):
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    lrtc = c.execute("""SELECT diagnosis, diagnosis_id
+                        FROM patient_diag_drug_""" + userid + """ lrt
+                        LEFT JOIN(SELECT DISTINCT id, diagnosis
+                                  FROM diagnosis_index) lri
+                        ON lrt.diagnosis_id = lri.id""")
+    lrt_return = pd.DataFrame(c.fetchall())
+    cols = list(pd.DataFrame(lrtc.description)[0])
+    lrt_return.columns = cols
+    
+    lrt_return = lrt_return[['diagnosis_id']][lrt_return['diagnosis'] == diagnosis].reset_index(drop=True)
+    lrt_return = int(lrt_return.loc[0,'diagnosis_id'])
+    
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("""DELETE 
+                 FROM patient_diag_drug_""" + userid + """ 
+                 WHERE CAST(diagnosis_id AS INTEGER) = """ + str(lrt_return))
+    conn.commit()
+    conn.close()
+    
+
+    
+    print(diagnosis + ' was deleted for ' + userid)
+
         
 def lab_results_staging_delete(labname, db_path, userid):
     
@@ -1102,37 +1188,37 @@ def final_submit(fname, lname, age, sex, weight, hr, bp, rr, o2sat, procs, notes
 
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)> 4""")
+    # c.execute("""DELETE FROM patient_vitals WHERE CAST(patient_id AS INT)> 0""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM daily_patient_numbers WHERE CAST(patient_id AS INT) > 4""")
+    # c.execute("""DELETE FROM daily_patient_numbers WHERE CAST(patient_id AS INT) > 0""")
     # conn.commit()
     # conn.close()   
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) > 4""")
+    # c.execute("""DELETE FROM patient_lab_results WHERE CAST(patient_id AS INT) > 0""")
     # conn.commit()
     # conn.close()
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) > 4""")
+    # c.execute("""DELETE FROM patient_diag_drug WHERE CAST(patient_id AS INT) > 0""")
     # conn.commit()
     # conn.close()  
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) > 4""")
+    # c.execute("""DELETE FROM patient_procs_notes WHERE CAST(patient_id AS INT) > 0""")
     # conn.commit()
     # conn.close()      
     
     # conn = sqlite3.connect(db_path)
     # c = conn.cursor()
-    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) > 4""")
+    # c.execute("""DELETE FROM patient_glasses WHERE CAST(patient_id AS INT) > 0""")
     # conn.commit()
     # conn.close()          
     
