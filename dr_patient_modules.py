@@ -91,7 +91,7 @@ def diagdrug_pull(yr, db_path):
                                  LEFT JOIN(SELECT * FROM drug_index) drg
                                  ON ddr.drug_id = drg.id and CAST(ddr.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
                                  LEFT JOIN(SELECT * FROM diagnosis_index) diag
-                                 ON ddr.diag_id = diag.id and CAST(ddr.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                 ON CAST(ddr.diag_id AS INTEGER) = CAST(diag.id AS INTEGER) and CAST(ddr.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
                                  WHERE CAST(ddr.year AS NVARCHAR) = """ + str(yr) )
     diag_drug_test = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(diag_drug_qry.description)[0])
