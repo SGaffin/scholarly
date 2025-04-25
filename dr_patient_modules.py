@@ -89,7 +89,7 @@ def diagdrug_pull(yr, db_path):
     diag_drug_qry = c.execute("""SELECT * 
                                  FROM diagnosis_drug_ref ddr
                                  LEFT JOIN(SELECT * FROM drug_index) drg
-                                 ON ddr.drug_id = drg.id and CAST(ddr.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
+                                 ON CAST(ddr.drug_id AS INTEGER) = CAST(drg.id AS INTEGER) and CAST(ddr.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
                                  LEFT JOIN(SELECT * FROM diagnosis_index) diag
                                  ON CAST(ddr.diag_id AS INTEGER) = CAST(diag.id AS INTEGER) and CAST(ddr.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
                                  WHERE CAST(ddr.year AS NVARCHAR) = """ + str(yr) )
