@@ -224,9 +224,9 @@ def existing_patient_diagdrug(yr, db_path, ep):
         diag_drug_qry = c.execute("""SELECT diag.diagnosis, drg.drug_name AS drug
                                      FROM patient_diag_drug pdd
                                      LEFT JOIN(SELECT * FROM drug_index) drg
-                                     ON pdd.drug_id = drg.id and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
+                                     ON CAST(pdd.drug_id AS INTEGER) = CAST(drg.id AS INTEGER) and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
                                      LEFT JOIN(SELECT * FROM diagnosis_index) diag
-                                     ON pdd.diagnosis_id = diag.id and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                     ON CAST(pdd.diagnosis_id AS INTEGER) = CAST(diag.id AS INTEGER) and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
                                      WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """' and CAST(patient_id AS INT)  = """ + str(pid) )
         diag_drug = pd.DataFrame(c.fetchall())
         cols = list(pd.DataFrame(diag_drug_qry.description)[0])
@@ -251,7 +251,7 @@ def existing_patient_labs(yr, db_path, ep):
                                 FROM patient_lab_results lr
                                 LEFT JOIN(SELECT DISTINCT lab_id, lab_name 
                                           FROM lab_results_index) li
-                                ON lr.lab_id = li.lab_id
+                                ON CAST(lr.lab_id AS INTEGER) = CAST(li.lab_id AS INTEGER)
                                 WHERE CAST(patient_id AS INTEGER) = """ + str(pid))
                           
         lab_data = pd.DataFrame(c.fetchall())
@@ -302,10 +302,10 @@ def diagdrug_recordviewer(yr, db_path):
 
                           LEFT JOIN(SELECT *
                                     FROM diagnosis_index) di
-                          ON pdd.diagnosis_id = di.id and CAST(pdd.year AS NVARCHAR) = CAST(di.year AS NVARCHAR)
+                          ON CAST(pdd.diagnosis_id AS INTEGER) = CAST(di.id AS INTEGER) and CAST(pdd.year AS NVARCHAR) = CAST(di.year AS NVARCHAR)
                           LEFT JOIN(SELECT *
                                     FROM drug_index) dri
-                          ON pdd.drug_id = dri.id and CAST(pdd.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
+                          ON CAST(pdd.drug_id AS INTEGER) = CAST(dri.id AS INTEGER) and CAST(pdd.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
                           WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """'
                           ORDER BY CAST(pdd.patient_id AS INT), last_name, first_name""")
                       
@@ -332,7 +332,7 @@ def pharm_recordviewer(yr, db_path):
                              FROM pharmacy_record pr
                              LEFT JOIN(SELECT *
                                        FROM drug_index) dri
-                             ON pr.drug_id = dri.id and CAST(pr.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
+                             ON CAST(pr.drug_id AS INTEGER) = CAST(dri.id AS INTEGER) and CAST(pr.year AS NVARCHAR) = CAST(dri.year AS NVARCHAR)
                              WHERE CAST(pr.year AS NVARCHAR) = '""" + str(yr) + """'""")
     pharm_data = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(pharm_qry.description)[0])
@@ -705,11 +705,11 @@ def diag_drug_staging(yr, diagnosis, drug, db_path, userid, create = 'Y'):
                         LEFT JOIN(SELECT *
                                   FROM diagnosis_index
                                   WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""') di
-                        ON ddt.diagnosis_id = di.id
+                        ON CAST(ddt.diagnosis_id AS INTEGER) = CAST(di.id AS INTEGER)
                         LEFT JOIN(SELECT *
                                   FROM drug_index
                                   WHERE CAST(year AS NVARCHAR) = '""" + str(yr) +"""') dri
-                        ON ddt.drug_id = dri.id""")
+                        ON CAST(ddt.drug_id AS INTEGER) = CAST(dri.id AS INTEGER)""")
     ddt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(ddtc.description)[0])
     ddt_return.columns = cols
@@ -743,9 +743,9 @@ def diagdrug_staging_ep(yr, db_path, userid, ep):
     diag_drug_qry = c.execute("""SELECT pdd.year, pdd.patient_id, diag.id as diagnosis_id, drg.id as drug_id
                                  FROM patient_diag_drug pdd
                                  LEFT JOIN(SELECT * FROM drug_index) drg
-                                 ON pdd.drug_id = drg.id and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
+                                 ON CAST(pdd.drug_id AS INTEGER)= CAST(drg.id AS INTEGER) and CAST(pdd.year AS NVARCHAR)= CAST(drg.year AS NVARCHAR)
                                  LEFT JOIN(SELECT * FROM diagnosis_index) diag
-                                 ON pdd.diagnosis_id = diag.id and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
+                                 ON CAST(pdd.diagnosis_id AS INTEGER) = CAST(diag.id AS INTEGER) and CAST(pdd.year AS NVARCHAR) = CAST(diag.year AS NVARCHAR)
                                  WHERE CAST(pdd.year AS NVARCHAR) = '""" + str(yr) + """' and CAST(patient_id AS INT)  = """ + str(pid) )
     diag_drug = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(diag_drug_qry.description)[0])
@@ -848,7 +848,7 @@ def lab_results_staging(lab_name, lab_value, db_path, userid, create = 'Y'):
                         FROM patient_lab_results_""" + userid + """ lrt
                         LEFT JOIN(SELECT DISTINCT lab_id, lab_name
                                   FROM lab_results_index) lri
-                        ON lrt.lab_id = lri.lab_id""")
+                        ON CAST(lrt.lab_id AS INTEGER) = CAST(lri.lab_id AS INTEGER)""")
     lrt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(lrtc.description)[0])
     lrt_return.columns = cols
@@ -961,7 +961,7 @@ def diagdrug_staging_delete(diagnosis, db_path, userid):
                         FROM patient_diag_drug_""" + userid + """ lrt
                         LEFT JOIN(SELECT DISTINCT id, diagnosis
                                   FROM diagnosis_index) lri
-                        ON lrt.diagnosis_id = lri.id""")
+                        ON CAST(lrt.diagnosis_id AS INTEGER) = CAST(lri.id AS INTEGER)""")
     lrt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(lrtc.description)[0])
     lrt_return.columns = cols
@@ -990,7 +990,7 @@ def lab_results_staging_delete(labname, db_path, userid):
                         FROM patient_lab_results_""" + userid + """ lrt
                         LEFT JOIN(SELECT DISTINCT lab_id, lab_name
                                   FROM lab_results_index) lri
-                        ON lrt.lab_id = lri.lab_id""")
+                        ON CAST(lrt.lab_id  AS INTEGER) = CAST(lri.lab_id AS INTEGER)""")
     lrt_return = pd.DataFrame(c.fetchall())
     cols = list(pd.DataFrame(lrtc.description)[0])
     lrt_return.columns = cols
