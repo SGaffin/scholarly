@@ -60,7 +60,7 @@ ui <- fluidPage(
              # fluidRow(column(12,uiOutput('patient_vitals_temp'))),
              fluidRow(column(12,uiOutput("l2_txt"))),
              fluidRow(column(12,uiOutput("labres_txt1"))),
-             fluidRow(column(3,uiOutput('slt_lab_name')), column(2, style='padding-left:0px;',uiOutput('slt_lab_val'))),
+             fluidRow(column(2,uiOutput('slt_lab_name')), column(2,uiOutput('slt_lab_val'))),
              fluidRow(column(2, style='padding-top:20px;' ,actionButton("add_lab_btn", "Add Lab", style="background-color: gray; border-color: #2e6da4"))),
              fluidRow(column(12, hidden(dataTableOutput('patient_lab_res_temp')))),
              fluidRow(column(12,uiOutput("l3_txt"))),
@@ -85,7 +85,7 @@ ui <- fluidPage(
              
              ),
     tabPanel('Record Viewer',
-             fluidRow(column(10, offset = 1,style = 'padding-left: 0px;',uiOutput('patient_records_tbl'))),
+             fluidRow(column(10, offset = 1,style = 'padding-left: 0px; padding-top: 50px;',uiOutput('patient_records_tbl'))),
              fluidRow(column(10, offset = 1,style = 'padding-left: 0px; padding-top: 50px;',uiOutput('diag_drug_tbl')))
              ),
     tabPanel('Pharmacy - Admin Only',
@@ -316,7 +316,7 @@ server <- function(input, output, session) {
       showModal(modalDialog(
         title = "Delete Diagnosis???",
         pddtemp,
-        footer = fluidRow(column(1, actionButton("deletediag_btn", "DELETE")), column(1, style='padding-left:75px;', modalButton("CANCEL"))
+        footer = fluidRow(column(1, actionButton("deletediag_btn", "DELETE", style="background-color: #fa2444;")), column(1, style='padding-left:75px;', modalButton("CANCEL"))
         )
       ))
       
@@ -436,10 +436,7 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = "Delete Lab???",
       plrtemp,
-      footer = fluidRow(column(1,offset = 4, style='padding-left:75px;', actionButton("deletelab_btn", "DELETE"))
-                        ,
-                        column(1, offset=7, modalButton("CANCEL"))
-                        )
+      footer = fluidRow(column(1, actionButton("deletelab_btn", "DELETE", style="background-color: #fa2444;")), column(1, style='padding-left:75px;', modalButton("CANCEL")))
     ))
     
     
@@ -542,22 +539,39 @@ server <- function(input, output, session) {
 
   
   output$patient_records_tbl <- renderUI({
-    pr <- diagdrug_pull$patientrecord_pull(substr(Sys.Date(), 1, 4), db_path = dir)
-    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
     
-    DT::renderDataTable(pr, rownames = FALSE,
-                        options = list(autoWidth = TRUE,
-                                       pageLength = 100))  
+    tryCatch(
+      expr = {
+          pr <- diagdrug_pull$patientrecord_pull(substr(Sys.Date(), 1, 4), db_path = dir)
+          # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+          
+          DT::renderDataTable(pr, rownames = FALSE,
+                              options = list(autoWidth = TRUE,
+                                             pageLength = 100))  
+      }, 
+      error = function(e){ pr <- data.frame('no patient records yet')
+        DT::renderDataTable(pr, rownames = FALSE,
+                            options = list(autoWidth = TRUE,
+                                           pageLength = 100))  
+        
+      })
   })
   
   output$diag_drug_tbl <- renderUI({
-    
-    dd <- diagdrug_pull$diagdrug_recordviewer(substr(Sys.Date(), 1, 4), db_path = dir)
-    # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
-    
-    DT::renderDataTable(dd, rownames = FALSE,
-                        options = list(autoWidth = TRUE,
-                                       pageLength = 100))  
+    tryCatch(
+      expr = {
+              dd <- diagdrug_pull$diagdrug_recordviewer(substr(Sys.Date(), 1, 4), db_path = dir)
+              # pr <- pr[c("diagnosis","drug_name","dosage","distribution")]
+              
+              DT::renderDataTable(dd, rownames = FALSE,
+                                  options = list(autoWidth = TRUE,
+                                                 pageLength = 100)) 
+              },
+      error = function(e){ dd <- data.frame('no patient records yet')
+        DT::renderDataTable(dd, rownames = FALSE,
+                           options = list(autoWidth = TRUE,
+                                          pageLength = 100)) 
+        })
   })
   
   
@@ -634,7 +648,7 @@ server <- function(input, output, session) {
   observeEvent(c(input$pharm_refyr_slt, input$pharm_newyr_slt, input$add_drug_btn, input$sub_pharm_btn),{
                 
                 output$pharm_ref_tbl <- renderDT({
-                                                  pr <- data.frame()
+                                                  pr <- data.frame('enter admin password')
                                                   tryCatch(                                
                   
                                                   {pr <- diagdrug_pull$pharm_stage_view(db_path = dir)
@@ -689,12 +703,6 @@ server <- function(input, output, session) {
                                                                                  pageLength = 100,
                                                                                  dom = 't'))
                                                     }
-                                                  },
-                                                  #if a warning occurs, tell me the warning
-                                                  warning=function(w) {
-                                                    message('A Warning Occurred')
-                                                    print(w)
-                                                    return(NA)
                                                   })
                 })
   
